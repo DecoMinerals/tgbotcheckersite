@@ -14,53 +14,49 @@ from dotenv import load_dotenv
 import os
 import asyncio
 
-# Загружаем переменные окружения из .env файла
+# Load environment variables
 load_dotenv()
 
-# Токен и чат ID для бота
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')  # Загружаем токен из .env
-CHAT_ID = os.getenv('CHAT_ID')  # Загружаем chat_id из .env
+# Bot token and chat ID
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+CHAT_ID = os.getenv('CHAT_ID')
 
-# Email настройки
+# Email settings
 SMTP_SERVER = os.getenv('SMTP_SERVER')
-SMTP_PORT = os.getenv('SMTP_PORT')
-SENDER_EMAIL = os.getenv('SENDER_EMAIL')  # Загружаем email отправителя
-SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')  # Загружаем пароль из .env
-RECEIVER_EMAIL = os.getenv('RECEIVER_EMAIL')  # Загружаем email получателя
+SMTP_PORT = int(os.getenv('SMTP_PORT'))  # Convert port to integer
+SENDER_EMAIL = os.getenv('SENDER_EMAIL')
+SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')
+RECEIVER_EMAIL = os.getenv('RECEIVER_EMAIL')
 
-# Список проверяемых сайтов
+# Sites to check
 SITES = [
     "https://stevent.ru",
     "https://decominerals.ru",
 ]
 
-# Настройка логирования
+# Configure logging
 logging.basicConfig(
     filename="bot.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Функция отправки email
 def send_email(subject, body):
     try:
-        # Настройка MIME для email
         msg = MIMEMultipart()
         msg['From'] = SENDER_EMAIL
         msg['To'] = RECEIVER_EMAIL
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
 
-        # Отправка email через SMTP сервер
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()  # Защищенное соединение
+            server.starttls()
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
-            logging.info(f"Email отправлен на {RECEIVER_EMAIL}")
+            logging.info(f"Email sent to {RECEIVER_EMAIL}")
     except Exception as e:
-        logging.error(f"Ошибка при отправке email: {str(e)}")
+        logging.error(f"Email sending error: {str(e)}")
 
-# Функция проверки сайтов
 def check_sites():
     result = []
     for site in SITES:
@@ -77,50 +73,43 @@ def check_sites():
         result.append(f"{site} — {status}")
     return result
 
-# Функция обработки команды /start
 async def start(update: Update, context: ContextTypes):
     keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привет! Я бот для проверки сайтов.", reply_markup=reply_markup)
 
-# Функция обработки нажатия на кнопку
 async def button_handler(update: Update, context: ContextTypes):
     query = update.callback_query
     await query.answer()
     result = check_sites()
     await query.edit_message_text("\n".join(result))
 
-# Фоновая проверка сайтов
 async def background_check(app):
     while True:
         logging.info("Фоновая проверка сайтов")
         result = check_sites()
-        # Проверяем на ошибки
         if any("❌" in r or "⚠️" in r for r in result):
             problems = "\n".join(result)
-            # Отправляем email, если есть проблемы
             send_email("Проблемы с сайтами", "⚠️ Проблемы:\n" + problems)
             await app.bot.send_message(chat_id=CHAT_ID, text="⚠️ Проблемы:\n" + problems)
         await asyncio.sleep(300)
 
-# Основная функция для запуска бота
 async def main():
-    # Инициализация приложения
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     
-    # Регистрируем обработчики команд
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    # Запускаем фоновую задачу проверки сайтов
-    asyncio.create_task(background_check(app))
+    # Start background task
+    asyncio.create_task(background_check(appS))
     
-    # Запускаем polling для бота
+    # Start the bot
     await app.run_polling()
 
 if __name__ == "__main__":
     try:
-        # Запуск асинхронной функции main с корректным запуском
         asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info("Bot stopped by user")
     except Exception as e:
-        logging.error(f"Ошибка при запуске: {e}")
+        logging.error(f"Startup error: {e}")
