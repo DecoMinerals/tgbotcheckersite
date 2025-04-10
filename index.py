@@ -128,6 +128,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("🔘 Кнопка нажата пользователем")
     logging.info("Кнопка нажата")
 
+    # Показываем "думаю..."
+    await query.edit_message_text("⏳ Проверяю сайты...")
+
+    await asyncio.sleep(1)  # Небольшая задержка, чтобы показать "думаю..."
+
     total_sites = len(SITES)
     result = check_sites()
     problem_sites = [r for r in result if "❌" in r or "⚠️" in r]
@@ -146,6 +151,42 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = message[:4000] + "\n\n⚠️ Сообщение обрезано из-за лимита Telegram"
 
     await query.edit_message_text(message, reply_markup=reply_markup)
+
+
+    """Периодически проверяет, жив ли бот и может ли обращаться к Telegram API"""
+async def health_check(app):
+    """Периодически проверяет, жив ли бот и может ли обращаться к Telegram API"""
+    while True:
+        try:
+            await app.bot.get_me()
+            print("✅ Бот жив и отвечает Telegram API")
+            logging.info("Health check: бот работает нормально")
+        except Exception as e:
+            error_message = f"❌ Бот не отвечает: {e}"
+            print(error_message)
+            logging.error(f"Health check failed: {e}")
+
+            # Отправка уведомления в Telegram
+            try:
+                await app.bot.send_message(
+                    chat_id=CHAT_ID,
+                    text="🚨 Бот не отвечает Telegram API!\nПроверь сервер или соединение."
+                )
+            except Exception as tg_error:
+                logging.error(f"Не удалось отправить сообщение в Telegram: {tg_error}")
+
+            # Отправка уведомления на email
+            try:
+                send_email(
+                    subject="🚨 Ошибка бота Telegram",
+                    body=f"Бот не отвечает: {e}"
+                )
+            except Exception as email_error:
+                logging.error(f"Не удалось отправить email: {email_error}")
+
+        await asyncio.sleep(600)  # Проверка каждые 5 минут
+
+
 
 # Фоновая проверка
 async def background_check(app):
@@ -184,7 +225,9 @@ async def main():
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(CallbackQueryHandler(button_handler))
 
+    # Фоновые задачи
     asyncio.create_task(background_check(app))
+    asyncio.create_task(health_check(app))
 
     logging.info("Бот запущен")
     print("🚀 Бот запущен и готов к работе!")
