@@ -25,6 +25,11 @@ from telegram.ext import (
 TELEGRAM_TOKEN = '7487235916:AAFijvFJ_n1ip-EckW7jr1rFYqgZsDX7EGc'
 CHAT_ID = '1911443016'
 
+print("SMTP_SERVER:", os.getenv("SMTP_SERVER"))
+print("SENDER_EMAIL:", os.getenv("SENDER_EMAIL"))
+print("SENDER_PASSWORD:", os.getenv("SENDER_PASSWORD"))
+print("RECEIVER_EMAIL:", os.getenv("RECEIVER_EMAIL"))
+
 # Настройки почты (добавьте свои значения)
 SMTP_SERVER = os.getenv('SMTP_SERVER')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 587))  # По умолчанию 587 порт
