@@ -114,16 +114,12 @@ async def main():
 
 # Основной блок для запуска
 if __name__ == "__main__":
-    try:
-        # Используем текущий цикл событий
-        loop = asyncio.get_event_loop()
+    # Проверка, если уже существует цикл событий
+    loop = asyncio.get_event_loop()
 
-        # Если цикл уже запущен, добавляем задачу
-        if loop.is_running():
-            logging.warning("Цикл событий уже запущен.")
-            loop.create_task(main())  # Запускаем задачу в уже работающем цикле
-        else:
-            loop.run_until_complete(main())  # Запускаем цикл событий для первой инициализации
-
-    except Exception as e:
-        logging.error(f"Ошибка: {e}")
+    # Если цикл уже запущен, добавляем задачу в текущий цикл
+    if loop.is_running():
+        logging.warning("Цикл событий уже запущен.")
+        loop.create_task(main())  # Запускаем задачу в уже работающем цикле
+    else:
+        loop.run_until_complete(main())  # Запускаем цикл событий для первой инициализации
