@@ -102,7 +102,7 @@ async def background_check(app):
             # Отправляем на почту
             send_email("Проблемы с сайтами", problems)
         
-        await asyncio.sleep(300)
+        await asyncio.sleep(30)
 
 async def main():
     """Основная функция запуска"""
