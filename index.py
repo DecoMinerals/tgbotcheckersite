@@ -30,31 +30,7 @@ SITES = [
     "https://stevent.ru",
     "https://stevent.ru/информация",
     "https://decominerals.ru",
-    "https://hockey.decominerals.ru",
-    "https://decofiltr.ru",
-    "https://decomol.ru",
-    "https://decoseeds.ru",
-    "https://halofiltr.ru",
-    "https://benteco.ru",
-    "https://amitox.ru",
-    "https://decoguard.ru",
-    "https://decofield.ru",
-    "https://decoorb.ru",
-    "https://decoclear.ru",
-    "https://decoarmor.ru",
-    "https://decopool.ru",
-    "https://decobase.ru",
-    "https://decoessence.ru",
-    "https://decobrew.ru",
-    "https://decogrape.ru",
-    "https://decopure.ru",
-    "https://decoaqua.ru",
-    "https://decobrights.ru",
-    "https://stilldry.pro",
-    "https://roaddry.ru",
-    "https://decocopper.pro",
-    "https://decotech.pro",
-    "https://decofry.ru",
+    # ... остальные сайты ...
 ]
 
 # Настройка логирования
@@ -100,34 +76,62 @@ def check_sites():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /start"""
+    total_sites = len(SITES)
     keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Привет! Я бот для проверки сайтов.", reply_markup=reply_markup)
+    await update.message.reply_text(
+        f"Привет! Я бот для проверки {total_sites} сайтов.", 
+        reply_markup=reply_markup
+    )
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик нажатия кнопки"""
     query = update.callback_query
     await query.answer()
+    
+    total_sites = len(SITES)
     result = check_sites()
+    problem_sites = [r for r in result if "❌" in r or "⚠️" in r]
+    problem_count = len(problem_sites)
     
     # Создаем клавиатуру с кнопкой "Проверить снова"
     keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text("\n".join(result), reply_markup=reply_markup)
+    message = (
+        f"Проверено {total_sites} сайтов\n"
+        f"Проблемных: {problem_count}\n\n" +
+        "\n".join(result)
+    )
+    
+    await query.edit_message_text(message, reply_markup=reply_markup)
 
 async def background_check(app):
     """Фоновая проверка сайтов"""
     while True:
         logging.info("Фоновая проверка сайтов")
         result = check_sites()
+        problem_sites = [r for r in result if "❌" in r or "⚠️" in r]
         
-        # Если есть проблемы
-        if any("❌" in r or "⚠️" in r for r in result):
-            problems = "⚠️ Проблемы:\n" + "\n".join(result)
+        if problem_sites:
+            total_sites = len(SITES)
+            problem_count = len(problem_sites)
+            
+            problems = (
+                f"⚠️ Проблемы с сайтами ({problem_count}/{total_sites}):\n\n" +
+                "\n".join(problem_sites)
+            )
+            
+            # Создаем клавиатуру с кнопкой "Проверить снова"
+            keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             
             # Отправляем в Telegram
-            await app.bot.send_message(chat_id=CHAT_ID, text=problems)
+            await app.bot.send_message(
+                chat_id=CHAT_ID,
+                text=problems,
+                reply_markup=reply_markup
+            )
             
             # Отправляем на почту
             send_email("Проблемы с сайтами", problems)
