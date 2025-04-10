@@ -18,6 +18,8 @@ CHAT_ID = '1911443016'
 SITES = [
     "https://stevent.ru",
     "https://decominerals.ru",
+    "https://tg.ru",
+    "https://rfrp36.ru/",
 ]
 
 logging.basicConfig(
