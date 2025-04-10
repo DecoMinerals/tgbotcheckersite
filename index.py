@@ -38,7 +38,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("bot.log"),
+        logging.FileHandler("bot.log", encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -91,53 +91,55 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ===================== ФОНОВАЯ ПРОВЕРКА =====================
 async def background_check(app):
     while True:
-        logging.info("Запуск фоновой проверки сайтов...")
-        results = check_sites()
-        
-        if any("❌" in r or "⚠️" in r for r in results):
-            problems = "\n".join(r for r in results if "❌" in r or "⚠️" in r)
-            send_email("Проблемы с сайтами", f"Обнаружены проблемы:\n{problems}")
-            await app.bot.send_message(
-                chat_id=CHAT_ID,
-                text=f"⚠️ Проблемы с сайтами:\n{problems}"
-            )
-        
-        await asyncio.sleep(300)
+        try:
+            logging.info("Запуск фоновой проверки сайтов...")
+            results = check_sites()
+            
+            if any("❌" in r or "⚠️" in r for r in results):
+                problems = "\n".join(r for r in results if "❌" in r or "⚠️" in r)
+                send_email("Проблемы с сайтами", f"Обнаружены проблемы:\n{problems}")
+                await app.bot.send_message(
+                    chat_id=CHAT_ID,
+                    text=f"⚠️ Проблемы с сайтами:\n{problems}"
+                )
+            
+            await asyncio.sleep(300)
+        except asyncio.CancelledError:
+            logging.info("Фоновая задача остановлена")
+            break
+        except Exception as e:
+            logging.error(f"Ошибка в фоновой задаче: {str(e)}")
 
 # ===================== ЗАПУСК БОТА =====================
 async def main():
-    logging.info("Запуск бота...")
+    logging.info("Инициализация бота...")
     
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    
-    # Создаем фоновую задачу
-    background_task = asyncio.create_task(background_check(app))
+    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_handler))
+
+    # Создаем и сохраняем ссылку на фоновую задачу
+    background_task = asyncio.create_task(background_check(application))
     
     try:
         logging.info("Бот запущен и ожидает сообщений...")
-        await app.run_polling()
-    except asyncio.CancelledError:
-        pass
-    except Exception as e:
-        logging.error(f"Ошибка в main(): {str(e)}")
+        await application.run_polling()
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("Получен сигнал остановки...")
     finally:
+        logging.info("Остановка фоновой задачи...")
         background_task.cancel()
         try:
             await background_task
         except asyncio.CancelledError:
             pass
-        await app.shutdown()
-        await app.updater.stop()
-        logging.info("Бот корректно завершил работу")
+        
+        logging.info("Корректное завершение работы бота")
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except KeyboardInterrupt:
-        logging.info("Бот остановлен пользователем")
     except Exception as e:
         logging.error(f"Критическая ошибка: {str(e)}")
     finally:
-        logging.info("Работа завершена")
+        logging.info("Работа программы завершена")
