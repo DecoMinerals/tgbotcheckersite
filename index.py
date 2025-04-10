@@ -1,6 +1,9 @@
 import logging
 import requests
 import asyncio
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -8,21 +11,56 @@ from telegram.ext import (
     CallbackQueryHandler,
     ContextTypes,
 )
+from dotenv import load_dotenv
+import os
 
-TELEGRAM_TOKEN = 'YOUR_TOKEN'
-CHAT_ID = 'YOUR_CHAT_ID'
+# Загружаем переменные окружения из .env файла
+load_dotenv()
 
+# Токен и чат ID для бота
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')  # Загружаем токен из .env
+CHAT_ID = os.getenv('CHAT_ID')  # Загружаем chat_id из .env
+
+# Email настройки
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+SENDER_EMAIL = os.getenv('SENDER_EMAIL')  # Загружаем email отправителя
+SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')  # Загружаем пароль из .env
+RECEIVER_EMAIL = os.getenv('RECEIVER_EMAIL')  # Загружаем email получателя
+
+# Список проверяемых сайтов
 SITES = [
     "https://stevent.ru",
     "https://decominerals.ru",
 ]
 
+# Настройка логирования
 logging.basicConfig(
     filename="bot.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+# Функция отправки email
+def send_email(subject, body):
+    try:
+        # Настройка MIME для email
+        msg = MIMEMultipart()
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = RECEIVER_EMAIL
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Отправка email через SMTP сервер
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()  # Защищенное соединение
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
+            logging.info(f"Email отправлен на {RECEIVER_EMAIL}")
+    except Exception as e:
+        logging.error(f"Ошибка при отправке email: {str(e)}")
+
+# Функция проверки сайтов
 def check_sites():
     result = []
     for site in SITES:
@@ -39,25 +77,33 @@ def check_sites():
         result.append(f"{site} — {status}")
     return result
 
+# Функция обработки команды /start
 async def start(update: Update, context: ContextTypes):
     keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привет! Я бот для проверки сайтов.", reply_markup=reply_markup)
 
+# Функция обработки нажатия на кнопку
 async def button_handler(update: Update, context: ContextTypes):
     query = update.callback_query
     await query.answer()
     result = check_sites()
     await query.edit_message_text("\n".join(result))
 
+# Фоновая проверка сайтов
 async def background_check(app):
     while True:
         logging.info("Фоновая проверка сайтов")
         result = check_sites()
+        # Проверяем на ошибки
         if any("❌" in r or "⚠️" in r for r in result):
-            await app.bot.send_message(chat_id=CHAT_ID, text="⚠️ Проблемы:\n" + "\n".join(result))
+            problems = "\n".join(result)
+            # Отправляем email, если есть проблемы
+            send_email("Проблемы с сайтами", "⚠️ Проблемы:\n" + problems)
+            await app.bot.send_message(chat_id=CHAT_ID, text="⚠️ Проблемы:\n" + problems)
         await asyncio.sleep(300)
 
+# Основная функция для запуска бота
 async def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
@@ -68,13 +114,13 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        # Пытаемся запустить основной асинхронный код, если цикл событий не запущен
+        # Пытаемся запустить основной асинхронный код
         import asyncio
         asyncio.run(main())
     except RuntimeError as e:
         if str(e) == "This event loop is already running":
             # Если цикл уже работает, используем существующий цикл
             loop = asyncio.get_event_loop()
-            loop.create_task(main())
+            loop.create_task(main())  # Создаем задачу для текущего цикла
         else:
             raise e
