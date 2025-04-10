@@ -1,67 +1,36 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
+import nest_asyncio
 import logging
 import requests
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+import asyncio
+from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
     ContextTypes,
 )
-from dotenv import load_dotenv
-import os
-import asyncio
 
-# ===================== НАСТРОЙКА =====================
-load_dotenv()
+# Разрешаем вложенные asyncio события
+nest_asyncio.apply()
 
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-CHAT_ID = os.getenv('CHAT_ID')
-
-SMTP_SERVER = os.getenv('SMTP_SERVER')
-SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
-SENDER_EMAIL = os.getenv('SENDER_EMAIL')
-SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')
-RECEIVER_EMAIL = os.getenv('RECEIVER_EMAIL')
+# Токены и конфигурация
+TELEGRAM_TOKEN = '7487235916:AAFijvFJ_n1ip-EckW7jr1rFYqgZsDX7EGc'
+CHAT_ID = '1911443016'
 
 SITES = [
     "https://stevent.ru",
     "https://decominerals.ru",
 ]
 
+# Настройка логирования
 logging.basicConfig(
+    filename="bot.log",
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("bot.log", encoding='utf-8'),
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# ===================== ФУНКЦИИ =====================
-def send_email(subject, body):
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = RECEIVER_EMAIL
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
-
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.send_message(msg)
-            logging.info(f"Email отправлен на {RECEIVER_EMAIL}")
-    except Exception as e:
-        logging.error(f"Ошибка отправки email: {str(e)}")
-
 def check_sites():
-    results = []
+    result = []
     for site in SITES:
         try:
             response = requests.get(site, timeout=10)
@@ -70,76 +39,49 @@ def check_sites():
             else:
                 status = f"⚠️ код {response.status_code}"
             logging.info(f"{site} — {status}")
-        except Exception as e:
-            status = f"❌ ошибка: {str(e)}"
+        except requests.exceptions.RequestException as e:
+            status = f"❌ ошибка: {e}"
             logging.error(f"{site} — {status}")
-        results.append(f"{site} — {status}")
-    return results
+        result.append(f"{site} — {status}")
+    return result
 
-# ===================== ОБРАБОТЧИКИ ТЕЛЕГРАМ =====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Кнопка для проверки сайтов
     keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привет! Я бот для проверки сайтов.", reply_markup=reply_markup)
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Обработка нажатия на кнопку
     query = update.callback_query
     await query.answer()
-    results = check_sites()
-    await query.edit_message_text("\n".join(results))
+    result = check_sites()
+    await query.edit_message_text("\n".join(result))
 
-# ===================== ФОНОВАЯ ПРОВЕРКА =====================
 async def background_check(app):
+    # Фоновая проверка сайтов каждую минуту
     while True:
-        try:
-            logging.info("Запуск фоновой проверки сайтов...")
-            results = check_sites()
-            
-            if any("❌" in r or "⚠️" in r for r in results):
-                problems = "\n".join(r for r in results if "❌" in r or "⚠️" in r)
-                send_email("Проблемы с сайтами", f"Обнаружены проблемы:\n{problems}")
-                await app.bot.send_message(
-                    chat_id=CHAT_ID,
-                    text=f"⚠️ Проблемы с сайтами:\n{problems}"
-                )
-            
-            await asyncio.sleep(300)
-        except asyncio.CancelledError:
-            logging.info("Фоновая задача остановлена")
-            break
-        except Exception as e:
-            logging.error(f"Ошибка в фоновой задаче: {str(e)}")
+        logging.info("Фоновая проверка сайтов")
+        result = check_sites()
+        if any("❌" in r or "⚠️" in r for r in result):
+            await app.bot.send_message(chat_id=CHAT_ID, text="⚠️ Проблемы:\n" + "\n".join(result))
+        await asyncio.sleep(300)  # Задержка в 5 минут
 
-# ===================== ЗАПУСК БОТА =====================
 async def main():
-    logging.info("Инициализация бота...")
-    
-    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler))
+    # Инициализация приложения и обработчиков
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(button_handler))
 
-    # Создаем и сохраняем ссылку на фоновую задачу
-    background_task = asyncio.create_task(background_check(application))
-    
+    # Запуск фона проверки
+    asyncio.create_task(background_check(app))
+
+    logging.info("Бот запущен и работает")
     try:
-        logging.info("Бот запущен и ожидает сообщений...")
-        await application.run_polling()
-    except (KeyboardInterrupt, SystemExit):
-        logging.info("Получен сигнал остановки...")
-    finally:
-        logging.info("Остановка фоновой задачи...")
-        background_task.cancel()
-        try:
-            await background_task
-        except asyncio.CancelledError:
-            pass
-        
-        logging.info("Корректное завершение работы бота")
+        await app.run_polling()  # Запуск polling
+    except Exception as e:
+        logging.error(f"Ошибка при запуске бота: {e}")
+        await app.bot.send_message(chat_id=CHAT_ID, text="Произошла ошибка при запуске бота.")
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except Exception as e:
-        logging.error(f"Критическая ошибка: {str(e)}")
-    finally:
-        logging.info("Работа программы завершена")
+    asyncio.run(main())
