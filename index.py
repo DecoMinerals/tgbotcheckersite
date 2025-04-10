@@ -110,8 +110,8 @@ async def main():
     app.add_handler(CallbackQueryHandler(button_handler))
     asyncio.create_task(background_check(app))
     logging.info("Бот запущен")
-    await app.run_polling()  # Здесь не нужно asyncio.run()
+    await app.run_polling()  # запускаем polling, без asyncio.run()
 
+# Запускаем polling прямо здесь
 if __name__ == "__main__":
-    # Просто запускаем main()
-    asyncio.run(main())
+    main()
