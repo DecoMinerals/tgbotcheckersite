@@ -39,12 +39,12 @@ def check_sites():
         result.append(f"{site} — {status}")
     return result
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context: ContextTypes):
     keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Привет! Я бот для проверки сайтов.", reply_markup=reply_markup)
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def button_handler(update: Update, context: ContextTypes):
     query = update.callback_query
     await query.answer()
     result = check_sites()
