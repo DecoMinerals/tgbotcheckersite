@@ -1,6 +1,8 @@
 import nest_asyncio
 nest_asyncio.apply()
 
+from datetime import datetime
+
 import os
 from dotenv import load_dotenv
 
