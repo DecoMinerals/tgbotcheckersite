@@ -29,7 +29,8 @@ RECEIVER_EMAIL = 'receiver@example.com'
 SITES = [
     "https://stevent.ru",
     "https://decominerals.ru",
-    "https://rfrp36.ru/",
+    "https://decofiltr.ru",
+    "https://decomol.ru",
 ]
 
 # Настройка логирования
