@@ -108,10 +108,12 @@ async def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
+    # Запускаем фоновую проверку
     asyncio.create_task(background_check(app))
     logging.info("Бот запущен")
-    await app.run_polling()  # запускаем polling, без asyncio.run()
+    # Запускаем polling
+    await app.run_polling()
 
-# Запускаем polling прямо здесь
 if __name__ == "__main__":
-    main()
+    # Просто вызываем асинхронную main функцию
+    asyncio.run(main())
