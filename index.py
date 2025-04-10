@@ -105,15 +105,22 @@ async def background_check(app):
 
 # Основная функция для запуска бота
 async def main():
+    # Инициализация приложения
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    
+    # Регистрируем обработчики команд
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
-    # Запускаем фоновую проверку
+
+    # Запускаем фоновую задачу проверки сайтов
     asyncio.create_task(background_check(app))
-    logging.info("Бот запущен")
-    # Запускаем polling
+    
+    # Запускаем polling для бота
     await app.run_polling()
 
 if __name__ == "__main__":
-    # Просто вызываем асинхронную main функцию
-    asyncio.run(main())
+    try:
+        # Запуск асинхронной функции main с корректным запуском
+        asyncio.run(main())
+    except Exception as e:
+        logging.error(f"Ошибка при запуске: {e}")
