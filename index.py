@@ -1,17 +1,13 @@
 import logging
 import requests
 import asyncio
-import nest_asyncio
-from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackQueryHandler,
     ContextTypes,
 )
-
-# Включаем поддержку вложенных событийных циклов
-nest_asyncio.apply()
 
 TELEGRAM_TOKEN = 'YOUR_TOKEN'
 CHAT_ID = 'YOUR_CHAT_ID'
@@ -71,5 +67,5 @@ async def main():
     await app.run_polling()
 
 if __name__ == "__main__":
-    # Запуск асинхронного основного цикла
+    # Используем asyncio.run() для запуска асинхронного основного кода
     asyncio.run(main())
