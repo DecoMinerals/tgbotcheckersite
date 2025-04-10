@@ -27,9 +27,9 @@ SENDER_PASSWORD = 'your_password'
 RECEIVER_EMAIL = 'receiver@example.com'
 
 SITES = [
-    "https://decominerals.ru",
     "https://stevent.ru",
     "https://stevent.ru/информация",
+    "https://decominerals.ru",
     "https://hockey.decominerals.ru",
     "https://decofiltr.ru",
     "https://decomol.ru",
@@ -38,12 +38,12 @@ SITES = [
     "https://benteco.ru",
     "https://amitox.ru",
     "https://decoguard.ru",
-    "https://decofield.pro",
+    "https://decofield.ru",
     "https://decoorb.ru",
     "https://decoclear.ru",
     "https://decoarmor.ru",
-    "https://decopool.pro",
-    "https://decobase.pro",
+    "https://decopool.ru",
+    "https://decobase.ru",
     "https://decoessence.ru",
     "https://decobrew.ru",
     "https://decogrape.ru",
@@ -102,7 +102,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /start"""
     keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(f"Привет! Я бот для проверки сайтов. У тебя их {len(SITES)}", reply_markup=reply_markup)
+    await update.message.reply_text("Привет! Я бот для проверки сайтов.", reply_markup=reply_markup)
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик нажатия кнопки"""
