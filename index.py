@@ -1,6 +1,5 @@
 import logging
 import requests
-import asyncio
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -13,6 +12,7 @@ from telegram.ext import (
 )
 from dotenv import load_dotenv
 import os
+import asyncio
 
 # Загружаем переменные окружения из .env файла
 load_dotenv()
@@ -110,16 +110,8 @@ async def main():
     app.add_handler(CallbackQueryHandler(button_handler))
     asyncio.create_task(background_check(app))
     logging.info("Бот запущен")
-    await app.run_polling()
+    await app.run_polling()  # Здесь не нужно asyncio.run()
 
-# Основной блок для запуска
 if __name__ == "__main__":
-    # Проверка, если уже существует цикл событий
-    loop = asyncio.get_event_loop()
-
-    # Если цикл уже запущен, добавляем задачу в текущий цикл
-    if loop.is_running():
-        logging.warning("Цикл событий уже запущен.")
-        loop.create_task(main())  # Запускаем задачу в уже работающем цикле
-    else:
-        loop.run_until_complete(main())  # Запускаем цикл событий для первой инициализации
+    # Просто запускаем main()
+    asyncio.run(main())
