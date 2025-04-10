@@ -112,25 +112,14 @@ async def main():
     logging.info("Бот запущен")
 
     # Явно ждем завершение работы бота
-    try:
-        await app.run_polling()
-    except Exception as e:
-        logging.error(f"Ошибка при запуске бота: {e}")
-    finally:
-        await app.shutdown()  # Дожидаемся завершения приложения
+    await app.run_polling()
 
 # Основной блок для запуска
 if __name__ == "__main__":
     try:
-        # Создаем и запускаем цикл событий
+        # Получаем текущий цикл событий и запускаем код
         loop = asyncio.get_event_loop()
-        loop.create_task(main())  # Создаем задачу для выполнения бота
-        loop.run_forever()  # Запускаем цикл событий
+        loop.run_until_complete(main())
     except RuntimeError as e:
-        if str(e) == "This event loop is already running":
-            # Если цикл событий уже работает, используем его
-            loop = asyncio.get_event_loop()
-            loop.create_task(main())  # Создаем задачу для текущего цикла
-            loop.run_forever()  # Запускаем цикл
-        else:
-            raise e
+        logging.error(f"Ошибка: {e}")
+        raise e
