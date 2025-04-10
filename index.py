@@ -1,6 +1,12 @@
 import nest_asyncio
 nest_asyncio.apply()
 
+import os
+from dotenv import load_dotenv
+
+# Загрузка переменных из .env файла
+load_dotenv()
+
 import logging
 import requests
 import smtplib
