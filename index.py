@@ -20,17 +20,41 @@ TELEGRAM_TOKEN = '7487235916:AAFijvFJ_n1ip-EckW7jr1rFYqgZsDX7EGc'
 CHAT_ID = '1911443016'
 
 # Настройки почты (добавьте свои значения)
-SMTP_SERVER = 'smtp.example.com'
-SMTP_PORT = 587
-SENDER_EMAIL = 'your_email@example.com'
-SENDER_PASSWORD = 'your_password'
-RECEIVER_EMAIL = 'receiver@example.com'
+SMTP_SERVER = os.getenv('SMTP_SERVER')
+SMTP_PORT = int(os.getenv('SMTP_PORT', 587))  # По умолчанию 587 порт
+SENDER_EMAIL = os.getenv('SENDER_EMAIL')
+SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')
+RECEIVER_EMAIL = os.getenv('RECEIVER_EMAIL')
 
 SITES = [
+    "https://decominerals.ru",
     "https://stevent.ru",
     "https://stevent.ru/информация",
-    "https://decominerals.ru",
-    # ... остальные сайты ...
+    "https://hockey.decominerals.ru",
+    "https://decofiltr.ru",
+    "https://decomol.ru",
+    "https://decoseeds.ru",
+    "https://halofiltr.ru",
+    "https://benteco.ru",
+    "https://amitox.ru",
+    "https://decoguard.ru",
+    "https://decofield.pro",
+    "https://decoorb.ru",
+    "https://decoclear.ru",
+    "https://decoarmor.ru",
+    "https://decopool.pro",
+    "https://decobase.pro",
+    "https://decoessence.ru",
+    "https://decobrew.ru",
+    "https://decogrape.ru",
+    "https://decopure.ru",
+    "https://decoaqua.ru",
+    "https://decobrights.ru",
+    "https://stilldry.pro",
+    "https://roaddry.ru",
+    "https://decocopper.pro",
+    "https://decotech.pro",
+    "https://decofry.ru",
 ]
 
 # Настройка логирования
