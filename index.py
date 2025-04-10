@@ -28,9 +28,33 @@ RECEIVER_EMAIL = 'receiver@example.com'
 
 SITES = [
     "https://stevent.ru",
+    "https://stevent.ru/информация",
     "https://decominerals.ru",
+    "https://hockey.decominerals.ru",
     "https://decofiltr.ru",
     "https://decomol.ru",
+    "https://decoseeds.ru",
+    "https://halofiltr.ru",
+    "https://benteco.ru",
+    "https://amitox.ru",
+    "https://decoguard.ru",
+    "https://decofield.ru",
+    "https://decoorb.ru",
+    "https://decoclear.ru",
+    "https://decoarmor.ru",
+    "https://decopool.ru",
+    "https://decobase.ru",
+    "https://decoessence.ru",
+    "https://decobrew.ru",
+    "https://decogrape.ru",
+    "https://decopure.ru",
+    "https://decoaqua.ru",
+    "https://decobrights.ru",
+    "https://stilldry.pro",
+    "https://roaddry.ru",
+    "https://decocopper.pro",
+    "https://decotech.pro",
+    "https://decofry.ru",
 ]
 
 # Настройка логирования
