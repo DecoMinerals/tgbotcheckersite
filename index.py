@@ -109,7 +109,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     result = check_sites()
-    await query.edit_message_text("\n".join(result))
+    
+    # Создаем клавиатуру с кнопкой "Проверить снова"
+    keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text("\n".join(result), reply_markup=reply_markup)
 
 async def background_check(app):
     """Фоновая проверка сайтов"""
