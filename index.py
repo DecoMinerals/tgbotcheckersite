@@ -116,11 +116,14 @@ if __name__ == "__main__":
     try:
         # Пытаемся запустить основной асинхронный код
         import asyncio
-        asyncio.run(main())
+        loop = asyncio.get_event_loop()  # Получаем текущий цикл событий
+        loop.create_task(main())  # Создаем задачу для текущего цикла
+        loop.run_forever()  # Запускаем цикл
     except RuntimeError as e:
         if str(e) == "This event loop is already running":
             # Если цикл уже работает, используем существующий цикл
             loop = asyncio.get_event_loop()
             loop.create_task(main())  # Создаем задачу для текущего цикла
+            loop.run_forever()
         else:
             raise e
