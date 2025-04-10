@@ -22,8 +22,8 @@ from telegram.ext import (
 )
 
 # Конфигурация
-TELEGRAM_TOKEN = '7487235916:AAFijvFJ_n1ip-EckW7jr1rFYqgZsDX7EGc'
-CHAT_ID = '1911443016'
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+CHAT_ID = os.getenv('CHAT_ID')
 
 # Настройки почты
 SMTP_SERVER = os.getenv('SMTP_SERVER')
@@ -32,19 +32,6 @@ SENDER_EMAIL = os.getenv('SENDER_EMAIL')
 SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')
 RECEIVER_EMAIL = os.getenv('RECEIVER_EMAIL')
 
-# Проверка переменных окружения
-print("==== Проверка переменных окружения ====")
-print("SMTP_SERVER:", SMTP_SERVER)
-print("SENDER_EMAIL:", SENDER_EMAIL)
-print("RECEIVER_EMAIL:", RECEIVER_EMAIL)
-print("=======================================")
-
-if not all([SMTP_SERVER, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD, RECEIVER_EMAIL]):
-    print("⚠️ ВНИМАНИЕ: Некоторые переменные окружения не заданы!")
-else:
-    print("✅ Все переменные окружения загружены.")
-
-# Список сайтов
 SITES = [
     "https://decominerals.ru",
     "https://stevent.ru",
@@ -76,15 +63,16 @@ SITES = [
     "https://decofry.ru",
 ]
 
-# Настройка логирования
+# Логирование
 logging.basicConfig(
     filename="bot.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+print("✅ Запуск бота...")
+
 def send_email(subject, body):
-    """Функция отправки email"""
     try:
         msg = MIMEMultipart()
         msg['From'] = SENDER_EMAIL
@@ -99,10 +87,8 @@ def send_email(subject, body):
             logging.info(f"Email отправлен на {RECEIVER_EMAIL}")
     except Exception as e:
         logging.error(f"Ошибка при отправке email: {str(e)}")
-        print(f"Ошибка при отправке email: {str(e)}")
 
 def check_sites():
-    """Проверка доступности сайтов"""
     result = []
     for site in SITES:
         try:
@@ -118,20 +104,29 @@ def check_sites():
         result.append(f"{site} — {status}")
     return result
 
+# Команда /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработчик команды /start"""
     total_sites = len(SITES)
     keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"Привет! Я бот для проверки {total_sites} сайтов.",
+        f"👋 Привет! Я бот для мониторинга {total_sites} сайтов.\n"
+        "Нажми кнопку ниже, чтобы проверить статус.",
         reply_markup=reply_markup
     )
+    print("📩 Получена команда /start")
 
+# Команда /ping
+async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🏓 Бот работает!")
+    print("🏓 Получена команда /ping")
+
+# Обработка нажатий кнопок
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработчик нажатия кнопки"""
     query = update.callback_query
     await query.answer()
+    print("🔘 Кнопка нажата пользователем")
+    logging.info("Кнопка нажата")
 
     total_sites = len(SITES)
     result = check_sites()
@@ -142,19 +137,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     message = (
-        f"Проверено {total_sites} сайтов\n"
-        f"Проблемных: {problem_count}\n\n" +
+        f"🔍 Проверено {total_sites} сайтов\n"
+        f"❗ Проблемных: {problem_count}\n\n" +
         "\n".join(result)
     )
 
+    if len(message) > 4000:
+        message = message[:4000] + "\n\n⚠️ Сообщение обрезано из-за лимита Telegram"
+
     await query.edit_message_text(message, reply_markup=reply_markup)
 
+# Фоновая проверка
 async def background_check(app):
-    """Фоновая проверка сайтов"""
     while True:
-        logging.info("🔁 Фоновая проверка сайтов...")
-        print("🔁 [Фоновая проверка] Проверяем сайты...")
-
+        logging.info("Фоновая проверка сайтов")
         result = check_sites()
         problem_sites = [r for r in result if "❌" in r or "⚠️" in r]
 
@@ -172,31 +168,26 @@ async def background_check(app):
 
             await app.bot.send_message(
                 chat_id=CHAT_ID,
-                text=problems,
+                text=problems[:4000],
                 reply_markup=reply_markup
             )
 
             send_email("Проблемы с сайтами", problems)
 
-        await asyncio.sleep(30)
+        await asyncio.sleep(60)
 
+# Основной запуск
 async def main():
-    """Основная функция запуска"""
-    print("""
-╔══════════════════════════════╗
-║ 🚀 БОТ ЗАПУСКАЕТСЯ...        ║
-╚══════════════════════════════╝
-""")
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("ping", ping))
     app.add_handler(CallbackQueryHandler(button_handler))
 
     asyncio.create_task(background_check(app))
 
     logging.info("Бот запущен")
-    print("✅ Бот успешно запущен. Ожидание команд...")
-
+    print("🚀 Бот запущен и готов к работе!")
     await app.run_polling()
 
 if __name__ == "__main__":
@@ -204,7 +195,7 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         logging.info("Бот остановлен пользователем")
-        print("\n🛑 Бот остановлен пользователем")
+        print("🛑 Бот остановлен пользователем")
     except Exception as e:
         logging.error(f"Ошибка при запуске: {e}")
         print(f"❌ Ошибка при запуске: {e}")
