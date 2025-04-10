@@ -125,32 +125,38 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    print("🔘 Кнопка нажата пользователем")
-    logging.info("Кнопка нажата")
 
-    # Показываем "думаю..."
-    await query.edit_message_text("⏳ Проверяю сайты...")
+    # Сообщаем пользователю, что бот начал проверку
+    await query.edit_message_text("⏳ Проверяю сайты... Пожалуйста, подождите.")
 
     await asyncio.sleep(1)  # Небольшая задержка, чтобы показать "думаю..."
 
+    # Получаем список сайтов и начинаем проверку
     total_sites = len(SITES)
-    result = check_sites()
-    problem_sites = [r for r in result if "❌" in r or "⚠️" in r]
+    result = check_sites()  # Проверка всех сайтов
+    problem_sites = [r for r in result if "❌" in r or "⚠️" in r]  # Проблемные сайты
     problem_count = len(problem_sites)
 
+    # Создаем клавиатуру с кнопкой "Проверить снова"
     keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    # Формируем сообщение с результатами
     message = (
         f"🔍 Проверено {total_sites} сайтов\n"
         f"❗ Проблемных: {problem_count}\n\n" +
         "\n".join(result)
     )
 
+    # Если сообщение слишком длинное, обрезаем его
     if len(message) > 4000:
         message = message[:4000] + "\n\n⚠️ Сообщение обрезано из-за лимита Telegram"
 
+    # Отправляем результаты обратно в Telegram
     await query.edit_message_text(message, reply_markup=reply_markup)
+
+    # Логируем информацию в консоль
+    print(f"✅ Проверка завершена: {total_sites} сайтов проверено, {problem_count} с проблемами.")
 
 
     """Периодически проверяет, жив ли бот и может ли обращаться к Telegram API"""
@@ -200,9 +206,11 @@ async def background_check(app):
             problem_count = len(problem_sites)
 
             problems = (
-                f"⚠️ Проблемы с сайтами ({problem_count}/{total_sites}):\n\n" +
-                "\n".join(problem_sites)
-            )
+    f"⚠️ Обнаружены проблемы с сайтами ({problem_count}/{total_sites}):\n"
+    f"🕓 Это автоматическое сообщение от {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
+    "\n".join(problem_sites)
+)
+
 
             keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -228,6 +236,7 @@ async def main():
     # Фоновые задачи
     asyncio.create_task(background_check(app))
     asyncio.create_task(health_check(app))
+    print("✅ Бот запущен и слушает Telegram API")
 
     logging.info("Бот запущен")
     print("🚀 Бот запущен и готов к работе!")
