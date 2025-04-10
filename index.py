@@ -110,7 +110,12 @@ async def main():
     app.add_handler(CallbackQueryHandler(button_handler))
     asyncio.create_task(background_check(app))
     logging.info("Бот запущен")
-    await app.run_polling()
+    try:
+        await app.run_polling()
+    except Exception as e:
+        logging.error(f"Ошибка при запуске бота: {e}")
+    finally:
+        await app.shutdown()  # Явно дожидаемся завершения бота
 
 if __name__ == "__main__":
     try:
