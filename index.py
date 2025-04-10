@@ -110,16 +110,19 @@ async def main():
     app.add_handler(CallbackQueryHandler(button_handler))
     asyncio.create_task(background_check(app))
     logging.info("Бот запущен")
-
-    # Явно ждем завершение работы бота
     await app.run_polling()
 
 # Основной блок для запуска
 if __name__ == "__main__":
     try:
-        # Получаем текущий цикл событий и запускаем код
+        # Создаем и запускаем цикл событий
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(main())
-    except RuntimeError as e:
+
+        # Если цикл уже запущен, пропускаем создание нового
+        if loop.is_running():
+            logging.warning("Цикл событий уже запущен.")
+        else:
+            loop.run_until_complete(main())
+
+    except Exception as e:
         logging.error(f"Ошибка: {e}")
-        raise e
