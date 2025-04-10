@@ -9,8 +9,8 @@ from telegram.ext import (
     ContextTypes,
 )
 
-TELEGRAM_TOKEN = 'ВАШ_ТОКЕН'
-CHAT_ID = 'ВАШ_CHAT_ID'
+TELEGRAM_TOKEN = '7487235916:AAFijvFJ_n1ip-EckW7jr1rFYqgZsDX7EGc'
+CHAT_ID = '1911443016'
 
 SITES = [
     "https://stevent.ru",
