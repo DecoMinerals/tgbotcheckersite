@@ -222,7 +222,7 @@ async def background_check(app):
         # Обновляем кэш
         status_cache = current_status.copy()
 
-        # Уведомление о проблемах (проверка на аутентификацию)
+        # Уведомление о проблемах
         if problem_sites:
             if is_authenticated:
                 msg = (
@@ -233,6 +233,7 @@ async def background_check(app):
                 )
 
                 try:
+                    logging.info(f"📬 Отправка сообщения с проблемами: {msg}")
                     await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
                     send_email("❗ Проблемы с сайтами", msg)
                 except Exception as e:
@@ -246,11 +247,13 @@ async def background_check(app):
         if recovered_sites:
             if is_authenticated:
                 msg = f"✅ Восстановились:\n" + "\n".join(recovered_sites)
+                logging.info(f"📬 Отправка сообщения о восстановлении: {msg}")
                 await app.bot.send_message(chat_id=CHAT_ID, text=msg, disable_notification=True)
             else:
                 logging.info("🔒 Восстановленные сайты, но сообщение не отправлено — пользователь не авторизован")
 
         await asyncio.sleep(60)
+
 
 # --- Запуск ---
 async def main():
