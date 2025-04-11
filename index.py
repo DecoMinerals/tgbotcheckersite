@@ -213,24 +213,23 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         all_sites = "\n".join(result)
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-      # Формируем список с проблемными сайтами
-problem_sites = [status for status in all_sites if "❌" in status or "⚠️" in status]
+        # Формируем список с проблемными сайтами
+        problem_sites = [status for status in result if "❌" in status or "⚠️" in status]
 
-# Если есть проблемы, показываем сообщение о проблемах
-if problem_sites:
-    message = (
-        f"⚠️ Обнаружены проблемы с сайтами\n\n"
-        f"Время проверки: {current_time}\n\n"
-        f"{'\n'.join(problem_sites)}"
-    )
-else:
-    # Если все сайты в порядке, отправляем сообщение о том, что все работает нормально
-    message = (
-        f"✅ Все сайты работают корректно\n\n"
-        f"Время проверки: {current_time}\n"
-        "Все сайты работают без ошибок!"
-    )
-
+        # Если есть проблемы, показываем сообщение о проблемах
+        if problem_sites:
+            message = (
+                f"⚠️ Обнаружены проблемы с сайтами\n\n"
+                f"Время проверки: {current_time}\n\n"
+                f"{'\n'.join(problem_sites)}"
+            )
+        else:
+            # Если все сайты в порядке, отправляем сообщение о том, что все работает нормально
+            message = (
+                f"✅ Все сайты работают корректно\n\n"
+                f"Время проверки: {current_time}\n"
+                "Все сайты работают без ошибок!"
+            )
 
         if len(message) > 4000:
             message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
@@ -270,7 +269,6 @@ async def health_check(app):
 status_cache = {}
 
 # --- Фоновая проверка ---
-# --- Фоновая проверка ---  
 async def background_check(app):
     global status_cache
     logging.info("🔄 Фоновая проверка сайтов запущена")
@@ -345,60 +343,24 @@ async def background_check(app):
                     logging.info("Уведомление о проблемах отправлено")
                     send_email("Проблемы с сайтами", msg)
                 except Exception as e:
-                    logging.error(f"Ошибка отправки уведомления: {e}")
-            else:
-                # Все сайты работают нормально
-                msg = (
-                    f"✅ Все сайты работают корректно\n\n"
-                    f"Время проверки: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                    "Все сайты работают без ошибок!"
-                )
-                try:
-                    await app.bot.send_message(
-                        chat_id=CHAT_ID,
-                        text=msg[:4000],
-                        disable_notification=True  # Без звукового уведомления
-                    )
-                    logging.info("Уведомление о нормальной работе сайтов отправлено")
-                    send_email("Все сайты работают корректно", msg)
-                except Exception as e:
-                    logging.error(f"Ошибка отправки уведомления: {e}")
-
-            status_cache = current_status
-            await asyncio.sleep(300)  # Пауза 5 минут между проверками
-
+                    logging.error(f"Ошибка при отправке уведомления: {e}")
         except Exception as e:
-            logging.error(f"Критическая ошибка в фоновой задаче: {e}")
-            await asyncio.sleep(30)  # Пауза при ошибке
+            logging.error(f"Ошибка в фоновом процессе проверки: {e}")
+        
+        await asyncio.sleep(600)  # Пауза между проверками (10 минут)
 
-
-# --- Запуск ---
+# --- Запуск Telegram бота ---
 async def main():
-    # Предварительная проверка подключения
-    try:
-        test = requests.get('https://google.com', timeout=10)
-        if test.status_code != 200:
-            logging.error("❌ Нет интернет-соединения")
-            return
-    except Exception as e:
-        logging.error(f"❌ Нет интернет-соединения: {e}")
-        return
+    app = await ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-
-    # Регистрируем хендлеры
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, password_check))
+    app.add_handler(MessageHandler(filters.TEXT, password_check))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    # Фоновая задача для проверки
-    asyncio.create_task(background_check(app))
+    asyncio.create_task(health_check(app))  # Фоновая проверка состояния Telegram API
+    asyncio.create_task(background_check(app))  # Фоновая проверка сайтов
 
-    # Проверка состояния Telegram API
-    asyncio.create_task(health_check(app))
-
-    # Запуск бота
     await app.run_polling()
 
 if __name__ == "__main__":
