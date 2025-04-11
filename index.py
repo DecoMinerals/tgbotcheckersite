@@ -231,7 +231,7 @@ async def background_check(app):
         if problem_sites:
             msg = (
                 f"⚠️ Обнаружены проблемы:\n"
-                f"🕓 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
+                f"🕓 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nЭто автоматическое сообщение от: \n\n" +
                 "\n".join(problem_sites)
             )
 
