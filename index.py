@@ -145,6 +145,7 @@ def check_sites():
     return result
 
 # --- Обработка кнопки ---
+# --- Проверка на аутентификацию перед показом проблем ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authenticated:
         await update.message.reply_text("❌ Пожалуйста, введите пароль для доступа.")
@@ -190,6 +191,9 @@ async def health_check(app):
                 logging.error("❌ Не удалось отправить email о сбое бота")
         await asyncio.sleep(600)
 
+# --- Кэш статусов ---
+status_cache = {}
+
 # --- Фоновая проверка ---
 async def background_check(app):
     global status_cache
@@ -204,14 +208,14 @@ async def background_check(app):
                 if response.status_code == 200:
                     current_status[site] = "✅"
                 elif response.status_code >= 500:
-                    current_status[site] = f"❌ {site} ошибка: {response.status_code}"
+                    current_status[site] = "❌"
                 else:
-                    current_status[site] = f"⚠️ {site} код ошибки: {response.status_code}"
-            except Exception as e:
-                current_status[site] = f"❌ {site} ошибка: {e}"
+                    current_status[site] = "⚠️"
+            except Exception:
+                current_status[site] = "❌"
 
         # Найдём проблемы
-        problem_sites = [f"{site} — {current_status[site]}" for site in current_status if current_status[site].startswith("❌") or current_status[site].startswith("⚠️")]
+        problem_sites = [f"{site} — {current_status[site]}" for site in current_status if current_status[site] in ("❌", "⚠️")]
 
         # Найдём восстановленные
         recovered_sites = [
@@ -237,9 +241,15 @@ async def background_check(app):
                     await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
                     send_email("❗ Проблемы с сайтами", msg)
                 except Exception as e:
-                    error_msg = f"❌ Email не отправлен: {e}"
+                    error_msg = f"❌ Ошибка при отправке сообщения: {e}"
                     logging.error(error_msg)
                     await app.bot.send_message(chat_id=CHAT_ID, text=error_msg)
+
+                    # Письмо не отправлено — добавим ошибку логирования
+                    try:
+                        send_email("❗ Ошибка отправки email", error_msg)
+                    except Exception as email_error:
+                        logging.error(f"❌ Ошибка при отправке email о проблемах: {email_error}")
             else:
                 logging.info("🔒 Проблемы с сайтами, но сообщение не отправлено — пользователь не авторизован")
 
@@ -253,7 +263,6 @@ async def background_check(app):
                 logging.info("🔒 Восстановленные сайты, но сообщение не отправлено — пользователь не авторизован")
 
         await asyncio.sleep(60)
-
 
 # --- Запуск ---
 async def main():
