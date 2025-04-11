@@ -147,9 +147,17 @@ def check_sites():
 # --- Обработка кнопки ---
 # --- Проверка на аутентификацию перед показом проблем ---
 # --- Обработка кнопки ---
+# --- Обработка кнопки ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
     if not is_authenticated:
-        await update.message.reply_text("❌ Пожалуйста, введите пароль для доступа.")
+        await query.edit_message_text(
+            "❌ Пожалуйста, введите пароль для доступа.\n"
+            "<tg-spoiler>Подсказка: фамилия программиста</tg-spoiler>",
+            parse_mode="HTML"
+        )
         return
 
     query = update.callback_query
@@ -161,13 +169,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Все сайты с их статусом
     all_sites = "\n".join(result)
 
-    # Сайты, которые работают
-    working_sites = [site for site in result if "✅" in site]
-    working_sites_text = "\n".join(working_sites) if working_sites else "✅ Все сайты работают"
+    # Получаем текущую дату и время
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # Сообщение, которое будет отправлено
     message = (
         f"🔍 Все проверенные сайты:\n\n{all_sites}\n\n"
-        f"✅ Работают следующие сайты:\n\n{working_sites_text}"
+        f"📅 Дата и время проверки: {current_time}"
     )
 
     # Если сообщение слишком длинное, его обрезаем
@@ -179,6 +187,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(message, reply_markup=reply_markup)
+
 
 
 # --- Проверка Telegram API ---
