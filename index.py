@@ -195,6 +195,7 @@ def check_sites():
     return result
 
 # --- Обработка кнопки ---
+# --- Обработка кнопки ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         query = update.callback_query
@@ -213,13 +214,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         all_sites = "\n".join(result)
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Формируем статус для всех сайтов
-        message = (
-            f"⚠️ Обнаружены проблемы с сайтами\n\n"
-            f"Время проверки: {current_time}\n\n"
-            f"{all_sites}"
-        )
+        # Проверяем, есть ли проблемы с сайтами
+        if all("✅" in status for status in result):  # Если все сайты работают
+            message = (
+                f"✅ Все сайты работают корректно\n\n"
+                f"Время проверки: {current_time}\n"
+                "Все сайты работают без ошибок!"
+            )
+        else:
+            message = (
+                f"⚠️ Обнаружены проблемы с сайтами\n\n"
+                f"Время проверки: {current_time}\n\n"
+                f"{all_sites}"
+            )
 
+        # Если сообщение слишком длинное, обрезаем его
         if len(message) > 4000:
             message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
 
@@ -235,6 +244,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Ошибка в обработчике кнопки: {e}")
         raise
+
 
 # --- Запуск ---
 async def main():
