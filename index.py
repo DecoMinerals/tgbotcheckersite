@@ -217,19 +217,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         problem_sites = [status for status in result if "❌" in status or "⚠️" in status]
 
         # Если есть проблемы, показываем сообщение о проблемах
-        if problem_sites:
-            message = (
-                f"⚠️ Обнаружены проблемы с сайтами\n\n"
-                f"Время проверки: {current_time}\n\n"
-                f"{'\n'.join(problem_sites)}"
-            )
-        else:
-            # Если все сайты в порядке, отправляем сообщение о том, что все работает нормально
-            message = (
-                f"✅ Все сайты работают корректно\n\n"
-                f"Время проверки: {current_time}\n"
-                "Все сайты работают без ошибок!"
-            )
+      if problem_sites:
+    message = (
+        f"⚠️ Обнаружены проблемы с сайтами\n\n"
+        f"Время проверки: {current_time}\n\n"
+        f"{'\n'.join(problem_sites)}"
+    )
+else:
+    # Если все сайты в порядке, отправляем сообщение о том, что все работает нормально
+    message = (
+        f"✅ Все сайты работают корректно\n\n"
+        f"Время проверки: {current_time}\n"
+        "Все сайты работают без ошибок!"
+    )
+
 
         if len(message) > 4000:
             message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
