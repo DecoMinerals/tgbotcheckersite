@@ -212,31 +212,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = check_sites()
         all_sites = "\n".join(result)
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Формируем список с проблемными сайтами
-      problem_sites = [
-    f"{site} — {status}"
-    for site, status in current_status.items()
-    if "❌" in status or "⚠️" in status
-]
 
-# Для отладки
-print(f"problem_sites: {problem_sites}")
-
-if problem_sites:
-    message = (
-        f"⚠️ Обнаружены проблемы с сайтами\n\n"
-        f"Время проверки: {current_time}\n\n"
-        f"{'\n'.join(problem_sites)}"
-    )
-else:
-    message = (
-        f"✅ Все сайты работают корректно\n\n"
-        f"Время проверки: {current_time}\n"
-        "Все сайты работают без ошибок!"
-    )
-
-
+        # Формируем статус для всех сайтов
+        message = (
+            f"⚠️ Обнаружены проблемы с сайтами\n\n"
+            f"Время проверки: {current_time}\n\n"
+            f"{all_sites}"
+        )
 
         if len(message) > 4000:
             message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
@@ -254,120 +236,27 @@ else:
         logging.error(f"Ошибка в обработчике кнопки: {e}")
         raise
 
-# --- Проверка Telegram API ---
-async def health_check(app):
-    while True:
-        try:
-            await app.bot.get_me()
-            logging.info("✅ Бот жив и отвечает Telegram API")
-        except Exception as e:
-            logging.error(f"❌ Telegram API недоступен: {e}")
-            try:
-                await app.bot.send_message(chat_id=CHAT_ID, text="🚨 Проблема с Telegram API!")
-            except Exception:
-                pass
-            try:
-                send_email("🚨 Бот недоступен", f"Ошибка: {e}")
-            except Exception:
-                logging.error("❌ Не удалось отправить email о сбое бота")
-        await asyncio.sleep(1200)  # Увеличена задержка между запросами
-
-# --- Кэш статусов ---
-status_cache = {}
-
-# --- Фоновая проверка ---
-async def background_check(app):
-    global status_cache
-    logging.info("🔄 Фоновая проверка сайтов запущена")
-
-    while True:
-        try:
-            logging.info("🔍 Начинаю новую проверку сайтов...")
-            current_status = {}
-
-            for site in SITES:
-                try:
-                    # Проверка DNS
-                    if not check_dns(site):
-                        current_status[site] = "❌ DNS ошибка"
-                        continue
-
-                    headers = {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                    }
-
-                    # Пробуем HEAD запрос сначала
-                    try:
-                        response = requests.head(site, headers=headers, timeout=20, allow_redirects=True)
-                        if response.status_code == 405:  # HEAD не поддерживается
-                            response = requests.get(site, headers=headers, timeout=20, allow_redirects=True)
-                    except requests.exceptions.SSLError:
-                        response = requests.get(site, headers=headers, timeout=20, allow_redirects=True, verify=False)
-                    except:
-                        response = requests.get(site, headers=headers, timeout=20, allow_redirects=True)
-
-                    # Анализ ответа
-                    if response.status_code == 200:
-                        current_status[site] = f"✅ {site} работает (код {response.status_code})"
-                    elif 300 <= response.status_code < 400:
-                        current_status[site] = f"⚠️ {site} перенаправление ({response.status_code})"
-                    elif 400 <= response.status_code < 500:
-                        current_status[site] = f"❌ {site} клиентская ошибка ({response.status_code})"
-                    else:
-                        current_status[site] = f"❌ {site} серверная ошибка ({response.status_code})"
-
-                except requests.exceptions.SSLError:
-                    current_status[site] = f"⚠️ {site} ошибка SSL"
-                except requests.exceptions.Timeout:
-                    current_status[site] = f"⚠️ {site} таймаут"
-                except requests.exceptions.ConnectionError:
-                    current_status[site] = f"❌ {site} ошибка подключения"
-                except Exception as e:
-                    current_status[site] = f"❌ {site} ошибка: {str(e)}"
-
-                logging.info(f"Проверен {site}: {current_status[site]}")
-                await asyncio.sleep(1)  # Пауза между запросами
-
-            # Проверка изменений статуса
-            problem_sites = [
-                f"{site} — {status}" 
-                for site, status in current_status.items() 
-                if "❌" in status or "⚠️" in status
-            ]
-
-            if problem_sites:
-                msg = (
-                    f"⚠️ Обнаружены проблемы с сайтами\n\n"
-                    f"Время проверки: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
-                    "\n".join(problem_sites)
-                )
-                try:
-                    await app.bot.send_message(
-                        chat_id=CHAT_ID,
-                        text=msg[:4000],
-                        disable_notification=False
-                    )
-                    logging.info("Уведомление о проблемах отправлено")
-                    send_email("Проблемы с сайтами", msg)
-                except Exception as e:
-                    logging.error(f"Ошибка при отправке уведомления: {e}")
-        except Exception as e:
-            logging.error(f"Ошибка в фоновом процессе проверки: {e}")
-        
-        await asyncio.sleep(600)  # Пауза между проверками (10 минут)
-
-# --- Запуск Telegram бота ---
+# --- Запуск ---
 async def main():
-    app = await ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    # Предварительная проверка подключения
+    try:
+        test = requests.get('https://google.com', timeout=10)
+        if test.status_code != 200:
+            logging.error("❌ Нет интернет-соединения")
+            return
+    except Exception as e:
+        logging.error(f"❌ Нет интернет-соединения: {e}")
+        return
 
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
+    # Регистрируем хендлеры
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
-    app.add_handler(MessageHandler(filters.TEXT, password_check))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, password_check))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    asyncio.create_task(health_check(app))  # Фоновая проверка состояния Telegram API
-    asyncio.create_task(background_check(app))  # Фоновая проверка сайтов
-
+    # Запуск бота
     await app.run_polling()
 
 if __name__ == "__main__":
