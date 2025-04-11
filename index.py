@@ -93,15 +93,33 @@ def send_email(subject, body):
         logging.error(f"❌ Ошибка при отправке email: {str(e)}")
         raise  # пробрасываем ошибку для обработки выше
 
+# --- Пароль для бота ---
+PASSWORD = os.getenv('PASSBOT')
+is_authenticated = False
+
 # --- Команда /start ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        f"👋 Привет! Я бот для мониторинга {len(SITES)} сайтов.\n"
-        "Нажми кнопку ниже, чтобы проверить статус.",
-        reply_markup=reply_markup
-    )
+    if not is_authenticated:
+        await update.message.reply_text("Введите пароль для доступа к боту.")
+    else:
+        keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            f"👋 Привет! Я бот для мониторинга {len(SITES)} сайтов.\n"
+            "Нажми кнопку ниже, чтобы проверить статус.",
+            reply_markup=reply_markup
+        )
+
+# --- Проверка пароля ---
+async def password_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global is_authenticated
+    password_input = update.message.text
+    if password_input == PASSWORD:
+        is_authenticated = True
+        await update.message.reply_text("🔓 Пароль верный! Доступ разрешен.")
+        await start(update, context)  # Перезапуск /start после успешной аутентификации
+    else:
+        await update.message.reply_text("❌ Неверный пароль. Попробуйте снова.")
 
 # --- Команда /ping ---
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -114,14 +132,14 @@ def check_sites():
         try:
             response = requests.get(site, timeout=10)
             if response.status_code == 200:
-                status = "✅ работает"
+                status = f"✅ {site} работает"
             else:
-                status = f"⚠️ код {response.status_code}"
+                status = f"⚠️ {site} код ошибки: {response.status_code}"
             logging.info(f"{site} — {status}")
         except requests.exceptions.RequestException as e:
-            status = f"❌ ошибка: {e}"
+            status = f"❌ {site} ошибка: {e}"
             logging.error(f"{site} — {status}")
-        result.append(f"{site} — {status}")
+        result.append(status)
     return result
 
 # --- Обработка кнопки ---
@@ -231,6 +249,9 @@ async def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(CallbackQueryHandler(button_handler))
+
+    # Обработчик для ввода пароля
+    app.add_handler(MessageHandler(Filters.text & ~Filters.command, password_check))
 
     asyncio.create_task(background_check(app))
     asyncio.create_task(health_check(app))
