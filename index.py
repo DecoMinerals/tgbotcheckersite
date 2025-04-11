@@ -133,7 +133,7 @@ async def perform_check(app, is_manual=False):
         new_status = await double_check_site(site)
         old_status = site_statuses.get(site, "unknown")
 
-        # Формируем лог
+        # Определяем статус для вывода
         if new_status == "ok":
             status_text = "✅ работает"
         elif "warn" in new_status:
@@ -141,47 +141,56 @@ async def perform_check(app, is_manual=False):
         else:
             status_text = "❌ сайт недоступен"
 
-        # Проверка на восстановление
+        # Восстановление
         if old_status != "ok" and new_status == "ok":
             restored_sites.append(site)
-        elif new_status == "fail":
-            failed_sites.append(site)
-        elif "warn" in new_status:
-            warned_sites.append(site)
 
+        # Сбор проблем
+        if new_status == "fail":
+            failed_sites.append(f"{site} — {status_text}")
+        elif "warn" in new_status:
+            warned_sites.append(f"{site} — {status_text}")
+
+        # Обновляем статус
         site_statuses[site] = new_status
         message_lines.append(f"{site} — {status_text}")
 
-    # Формируем сообщение для Telegram
-    summary = f"🔍 Проверка завершена: {len(SITES)} сайтов\n"
-    if failed_sites or warned_sites:
-        summary += f"❗ Проблемы: {len(failed_sites)} критических, {len(warned_sites)} предупреждений\n\n"
-    else:
-        summary += "✅ Все сайты работают корректно\n\n"
-    summary += "\n".join(message_lines[:40])
-    if len(message_lines) > 40:
-        summary += "\n... (обрезано)"
+    # Суммарная шапка
+    summary = f"🔍 Проверено {len(SITES)} сайтов\n"
+    summary += f"❗ Критических: {len(failed_sites)} | Предупреждений: {len(warned_sites)}\n"
 
+    # Решаем, что показывать
+    if failed_sites or warned_sites:
+        details = "\n".join(failed_sites + warned_sites)
+    else:
+        details = "\n".join(message_lines)
+
+    # Ограничение длины
+    if len(details) > 3800:
+        details = details[:3800] + "\n\n⚠️ Сообщение обрезано из-за лимита Telegram"
+
+    # Добавляем кнопку
     keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    final_message = summary + "\n\n" + details
+
     if is_manual:
-        await app.bot.send_message(chat_id=CHAT_ID, text=summary[:4000], reply_markup=reply_markup)
+        await app.bot.send_message(chat_id=CHAT_ID, text=final_message, reply_markup=reply_markup)
     else:
         if failed_sites:
-            await app.bot.send_message(chat_id=CHAT_ID, text=summary[:4000], reply_markup=reply_markup, disable_notification=False)
-            send_email("❌ Критические сбои сайтов", summary)
+            await app.bot.send_message(chat_id=CHAT_ID, text=final_message, reply_markup=reply_markup, disable_notification=False)
+            send_email("❌ Критические сбои сайтов", final_message)
         elif warned_sites:
-            await app.bot.send_message(chat_id=CHAT_ID, text=summary[:4000], reply_markup=reply_markup, disable_notification=True)
-            send_email("⚠️ Предупреждения по сайтам", summary)
+            await app.bot.send_message(chat_id=CHAT_ID, text=final_message, reply_markup=reply_markup, disable_notification=True)
+            send_email("⚠️ Предупреждения по сайтам", final_message)
 
+    # Уведомление о восстановлении
     if restored_sites:
-        restored_text = (
-            f"🟢 Восстановлены сайты:\n" +
-            "\n".join(restored_sites)
-        )
+        restored_text = "🟢 Сайты восстановлены:\n" + "\n".join(restored_sites)
         await app.bot.send_message(chat_id=CHAT_ID, text=restored_text, disable_notification=True)
         logging.info(f"Сайты восстановлены: {restored_sites}")
+
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
