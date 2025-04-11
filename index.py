@@ -102,7 +102,7 @@ is_authenticated = False
 # --- Команда /start ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authenticated:
-        await update.message.reply_text("Введите пароль для доступа к боту.")
+        await update.message.reply_text("Введите пароль для доступа к боту. Подсказка: фамилия программиста")
     else:
         keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -146,6 +146,7 @@ def check_sites():
 
 # --- Обработка кнопки ---
 # --- Проверка на аутентификацию перед показом проблем ---
+# --- Обработка кнопки ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authenticated:
         await update.message.reply_text("❌ Пожалуйста, введите пароль для доступа.")
@@ -156,22 +157,29 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text("⏳ Проверяю сайты...")
 
     result = check_sites()
-    problem_sites = [r for r in result if "❌" in r or "⚠️" in r]
-    total_sites = len(SITES)
-    problem_count = len(problem_sites)
+
+    # Все сайты с их статусом
+    all_sites = "\n".join(result)
+
+    # Сайты, которые работают
+    working_sites = [site for site in result if "✅" in site]
+    working_sites_text = "\n".join(working_sites) if working_sites else "✅ Все сайты работают"
 
     message = (
-        f"🔍 Проверено {total_sites} сайтов\n"
-        f"❗ Проблемных: {problem_count}\n\n" +
-        "\n".join(problem_sites if problem_sites else ["✅ Все сайты работают"])
+        f"🔍 Все проверенные сайты:\n\n{all_sites}\n\n"
+        f"✅ Работают следующие сайты:\n\n{working_sites_text}"
     )
 
+    # Если сообщение слишком длинное, его обрезаем
     if len(message) > 4000:
         message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
 
+    # Кнопка для повторной проверки
     keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await query.edit_message_text(message, reply_markup=reply_markup)
+
 
 # --- Проверка Telegram API ---
 async def health_check(app):
