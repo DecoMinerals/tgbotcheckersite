@@ -137,15 +137,45 @@ def check_sites():
     result = []
     for site in SITES:
         try:
-            response = requests.get(site, timeout=10)
+            # Добавляем заголовки, чтобы выглядеть как обычный браузер
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+            }
+            
+            # Проверяем как HEAD запросом (быстрее), если не получается - GET
+            try:
+                response = requests.head(site, headers=headers, timeout=10, allow_redirects=True)
+                # Если HEAD не поддерживается, пробуем GET
+                if response.status_code == 405:
+                    response = requests.get(site, headers=headers, timeout=10, allow_redirects=True)
+            except:
+                response = requests.get(site, headers=headers, timeout=10, allow_redirects=True)
+            
+            # Проверяем статус код и содержимое ответа
             if response.status_code == 200:
-                status = f"✅ {site} работает"
+                # Дополнительная проверка для некоторых сайтов
+                if 'decopure.ru' in site and len(response.content) < 500:
+                    status = f"⚠️ {site} подозрительно маленький ответ ({len(response.content)} байт)"
+                else:
+                    status = f"✅ {site} работает (код {response.status_code})"
+            elif 300 <= response.status_code < 400:
+                status = f"⚠️ {site} перенаправление (код {response.status_code})"
             else:
-                status = f"⚠️ {site} код ошибки: {response.status_code}"
-            logging.info(f"{site} — {status}")
+                status = f"❌ {site} код ошибки: {response.status_code}"
+                
+        except requests.exceptions.SSLError as e:
+            status = f"⚠️ {site} ошибка SSL: {str(e)}"
+        except requests.exceptions.Timeout:
+            status = f"⚠️ {site} таймаут соединения"
+        except requests.exceptions.ConnectionError:
+            status = f"⚠️ {site} ошибка подключения"
         except requests.exceptions.RequestException as e:
-            status = f"❌ {site} ошибка: {e}"
-            logging.error(f"{site} — {status}")
+            status = f"❌ {site} ошибка запроса: {str(e)}"
+        except Exception as e:
+            status = f"❌ {site} непредвиденная ошибка: {str(e)}"
+            
+        logging.info(f"{site} — {status}")
         result.append(status)
     return result
 
@@ -221,44 +251,42 @@ async def background_check(app):
             
             for site in SITES:
                 try:
-                    response = requests.get(site, timeout=10)
-                    current_status[site] = "✅" if response.status_code == 200 else f"⚠️ {response.status_code}"
-                    logging.info(f"Проверен {site}: {current_status[site]}")
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                    
+                    # Пробуем HEAD запрос сначала
+                    try:
+                        response = requests.head(site, headers=headers, timeout=15, allow_redirects=True)
+                        if response.status_code == 405:  # HEAD не поддерживается
+                            response = requests.get(site, headers=headers, timeout=15, allow_redirects=True)
+                    except:
+                        response = requests.get(site, headers=headers, timeout=15, allow_redirects=True)
+                    
+                    # Более точная проверка статуса
+                    if response.status_code == 200:
+                        if 'decopure.ru' in site and len(response.content) < 500:
+                            current_status[site] = f"⚠️ Маленький ответ ({len(response.content)} байт)"
+                        else:
+                            current_status[site] = "✅"
+                    elif 300 <= response.status_code < 400:
+                        current_status[site] = f"⚠️ Перенаправление ({response.status_code})"
+                    elif 400 <= response.status_code < 500:
+                        current_status[site] = f"⚠️ Клиентская ошибка ({response.status_code})"
+                    else:
+                        current_status[site] = f"❌ Серверная ошибка ({response.status_code})"
+                        
+                except requests.exceptions.SSLError:
+                    current_status[site] = "⚠️ Ошибка SSL"
+                except requests.exceptions.Timeout:
+                    current_status[site] = "⚠️ Таймаут"
+                except requests.exceptions.ConnectionError:
+                    current_status[site] = "⚠️ Ошибка подключения"
                 except Exception as e:
-                    current_status[site] = f"❌ {str(e)}"
-                    logging.error(f"Ошибка при проверке {site}: {e}")
+                    current_status[site] = f"❌ Ошибка: {str(e)}"
+                
+                logging.info(f"Проверен {site}: {current_status[site]}")
                 await asyncio.sleep(1)  # Пауза между запросами
-            
-            # Проверка изменений статуса
-            problem_sites = [
-                f"{site} — {status}" 
-                for site, status in current_status.items() 
-                if "❌" in status or "⚠️" in status
-            ]
-            
-            if problem_sites:
-                msg = (
-                    f"⚠️ Обнаружены проблемы с сайтами:\n"
-                    f"Время проверки: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
-                    "\n".join(problem_sites)
-                )
-                try:
-                    await app.bot.send_message(
-                        chat_id=CHAT_ID,
-                        text=msg[:4000],
-                        disable_notification=False
-                    )
-                    logging.info("Уведомление о проблемах отправлено")
-                    send_email("Проблемы с сайтами", msg)
-                except Exception as e:
-                    logging.error(f"Ошибка отправки уведомления: {e}")
-            
-            status_cache = current_status
-            await asyncio.sleep(300)  # Пауза 5 минут между проверками
-            
-        except Exception as e:
-            logging.error(f"Критическая ошибка в фоновой задаче: {e}")
-            await asyncio.sleep(60)  # Пауза при ошибке
 
 # --- Запуск ---
 async def main():
