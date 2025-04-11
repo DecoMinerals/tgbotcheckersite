@@ -103,7 +103,7 @@ is_authenticated = False
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authenticated:
         await update.message.reply_text(
-            r"❌ Пожалуйста\, введите пароль для доступа\." + "\n" +
+            r"Пожалуйста\, введите пароль для доступа\." + "\n" +
             r"||Подсказка\: фамилия программиста на английском||",
             parse_mode="MarkdownV2"
         )
@@ -155,7 +155,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if not is_authenticated:
         await query.edit_message_text(
-            r"❌ Пожалуйста\, введите пароль для доступа\." + "\n" +
+            r"Пожалуйста\, введите пароль для доступа\." + "\n" +
             r"||Подсказка\: фамилия программиста на английском||",
             parse_mode="MarkdownV2"
         )
