@@ -64,7 +64,6 @@ SITES = [
     "https://decocopper.pro",
     "https://decotech.pro",
     "https://decofry.ru",
-    "https://rfrp36.ru/"
 ]
 
 # --- Логирование ---
@@ -176,7 +175,7 @@ def check_sites():
             elif 300 <= response.status_code < 400:
                 status = f"⚠️ {site} перенаправление (код {response.status_code})"
             elif 400 <= response.status_code < 500:
-                status = f"⚠️ {site} клиентская ошибка (код {response.status_code})"
+                status = f"❌ {site} клиентская ошибка (код {response.status_code})"
             else:
                 status = f"❌ {site} серверная ошибка (код {response.status_code})"
 
@@ -295,7 +294,7 @@ async def background_check(app):
                     elif 300 <= response.status_code < 400:
                         current_status[site] = f"⚠️ {site} перенаправление ({response.status_code})"
                     elif 400 <= response.status_code < 500:
-                        current_status[site] = f"⚠️ {site} клиентская ошибка ({response.status_code})"
+                        current_status[site] = f"❌ {site} клиентская ошибка ({response.status_code})"
                     else:
                         current_status[site] = f"❌ {site} серверная ошибка ({response.status_code})"
 
@@ -336,11 +335,11 @@ async def background_check(app):
                     logging.error(f"Ошибка отправки уведомления: {e}")
 
             status_cache = current_status
-            await asyncio.sleep(600)  # Пауза 10 минут между проверками
+            await asyncio.sleep(300)  # Пауза 5 минут между проверками
 
         except Exception as e:
             logging.error(f"Критическая ошибка в фоновой задаче: {e}")
-            await asyncio.sleep(60)  # Пауза при ошибке
+            await asyncio.sleep(30)  # Пауза при ошибке
 
 # --- Запуск ---
 async def main():
