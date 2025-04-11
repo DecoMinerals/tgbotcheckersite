@@ -150,11 +150,9 @@ def check_sites():
 # --- Обработка кнопки ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authenticated:
-        await update.message.reply_text("❌ Пожалуйста, введите пароль для доступа.")
-         await update.callback_query.edit_message_text(
-            "❌ Пожалуйста, введите пароль для доступа.\n"
-            "||Подсказка: фамилия программиста||",
-            parse_mode="MarkdownV2"
+        await update.message.reply_text(
+    "❌ Пожалуйста, введите пароль для доступа. ||Подсказка: фамилия программиста на английском||",
+    parse_mode="MarkdownV2"
         )
         return
 
