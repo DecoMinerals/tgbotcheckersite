@@ -145,7 +145,12 @@ def check_sites():
     return result
 
 # --- Обработка кнопки ---
+# --- Проверка на аутентификацию перед показом проблем ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_authenticated:
+        await update.message.reply_text("❌ Пожалуйста, введите пароль для доступа.")
+        return
+
     query = update.callback_query
     await query.answer()
     await query.edit_message_text("⏳ Проверяю сайты...")
@@ -167,6 +172,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(message, reply_markup=reply_markup)
+
 
 # --- Проверка Telegram API ---
 async def health_check(app):
