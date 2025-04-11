@@ -102,7 +102,10 @@ is_authenticated = False
 # --- Команда /start ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authenticated:
-        await update.message.reply_text("Введите пароль для доступа к боту. Подсказка: фамилия программиста")
+           await update.message.reply_text(
+    "❌ Пожалуйста, введите пароль для доступа. ||Подсказка: фамилия программиста на английском||",
+    parse_mode="MarkdownV2"
+        )
     else:
         keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
