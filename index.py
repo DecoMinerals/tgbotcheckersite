@@ -93,7 +93,7 @@ def send_email(subject, body):
             print(f"📧 Email отправлен на {RECEIVER_EMAIL}")
     except Exception as e:
         logging.error(f"❌ Ошибка при отправке email: {str(e)}")
-        raise  # пробрасываем ошибку для обработки выше
+        raise
 
 # --- Пароль для бота ---
 PASSWORD = os.getenv('PASSBOT')
@@ -102,9 +102,10 @@ is_authenticated = False
 # --- Команда /start ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authenticated:
-           await update.message.reply_text(
-    "❌ Пожалуйста, введите пароль для доступа. ||Подсказка: фамилия программиста на английском||",
-    parse_mode="MarkdownV2"
+        await update.message.reply_text(
+            r"❌ Пожалуйста\, введите пароль для доступа\." + "\n" +
+            r"||Подсказка\: фамилия программиста на английском||",
+            parse_mode="MarkdownV2"
         )
     else:
         keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
@@ -122,7 +123,7 @@ async def password_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if password_input == PASSWORD:
         is_authenticated = True
         await update.message.reply_text("🔓 Пароль верный! Доступ разрешен.")
-        await start(update, context)  # Перезапуск /start после успешной аутентификации
+        await start(update, context)
     else:
         await update.message.reply_text("❌ Неверный пароль. Попробуйте снова.")
 
@@ -148,46 +149,33 @@ def check_sites():
     return result
 
 # --- Обработка кнопки ---
-# --- Проверка на аутентификацию перед показом проблем ---
-# --- Обработка кнопки ---
-# --- Обработка кнопки ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
     if not is_authenticated:
-        await update.message.reply_text(
-    "❌ Пожалуйста, введите пароль для доступа. ||Подсказка: фамилия программиста на английском||",
-    parse_mode="MarkdownV2"
+        await query.edit_message_text(
+            r"❌ Пожалуйста\, введите пароль для доступа\." + "\n" +
+            r"||Подсказка\: фамилия программиста на английском||",
+            parse_mode="MarkdownV2"
         )
         return
 
-    query = update.callback_query
-    await query.answer()
     await query.edit_message_text("⏳ Проверяю сайты...")
-
     result = check_sites()
-
-    # Все сайты с их статусом
     all_sites = "\n".join(result)
-
-    # Получаем текущую дату и время
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Сообщение, которое будет отправлено
     message = (
         f"🔍 Все проверенные сайты:\n\n{all_sites}\n\n"
         f"📅 Дата и время проверки: {current_time}"
     )
 
-    # Если сообщение слишком длинное, его обрезаем
     if len(message) > 4000:
         message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
 
-    # Кнопка для повторной проверки
     keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
     await query.edit_message_text(message, reply_markup=reply_markup)
-
-
 
 # --- Проверка Telegram API ---
 async def health_check(app):
@@ -224,25 +212,20 @@ async def background_check(app):
                 if response.status_code == 200:
                     current_status[site] = "✅"
                 elif response.status_code >= 500:
-                    current_status[site] = f"❌ {response.status_code}"  # Добавлен код ошибки
+                    current_status[site] = f"❌ {response.status_code}"
                 else:
-                    current_status[site] = f"⚠️ {response.status_code}"  # Добавлен код ошибки
+                    current_status[site] = f"⚠️ {response.status_code}"
             except Exception as e:
-                current_status[site] = f"❌ Ошибка: {str(e)}"  # Добавлен текст ошибки
+                current_status[site] = f"❌ Ошибка: {str(e)}"
 
-        # Найдём проблемы
         problem_sites = [f"{site} — {current_status[site]}" for site in current_status if current_status[site] in ("❌", "⚠️")]
-
-        # Найдём восстановленные
         recovered_sites = [
             site for site in current_status
             if status_cache.get(site) in ("❌", "⚠️") and current_status[site] == "✅"
         ]
 
-        # Обновляем кэш
         status_cache = current_status.copy()
 
-        # Уведомление о проблемах
         if problem_sites:
             if is_authenticated:
                 msg = (
@@ -251,7 +234,6 @@ async def background_check(app):
                     f"🕓 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
                     "\n".join(problem_sites)
                 )
-
                 try:
                     logging.info(f"📬 Отправка сообщения с проблемами: {msg}")
                     await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
@@ -260,8 +242,6 @@ async def background_check(app):
                     error_msg = f"❌ Ошибка при отправке сообщения: {e}"
                     logging.error(error_msg)
                     await app.bot.send_message(chat_id=CHAT_ID, text=error_msg)
-
-                    # Письмо не отправлено — добавим ошибку логирования
                     try:
                         send_email("❗ Ошибка отправки email", error_msg)
                     except Exception as email_error:
@@ -269,7 +249,6 @@ async def background_check(app):
             else:
                 logging.info("🔒 Проблемы с сайтами, но сообщение не отправлено — пользователь не авторизован")
 
-        # Уведомление о восстановлении (без звука)
         if recovered_sites:
             if is_authenticated:
                 msg = f"✅ Восстановились:\n" + "\n".join(recovered_sites)
@@ -287,8 +266,6 @@ async def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(CallbackQueryHandler(button_handler))
-
-    # Обработчик для ввода пароля
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, password_check))
 
     asyncio.create_task(background_check(app))
