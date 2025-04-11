@@ -7,6 +7,7 @@ import logging
 import requests
 import smtplib
 import asyncio
+import telegram
 from dotenv import load_dotenv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -150,32 +151,42 @@ def check_sites():
 
 # --- Обработка кнопки ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    if not is_authenticated:
-        await query.edit_message_text(
-            r"Пожалуйста\, введите пароль для доступа\." + "\n" +
-            r"||Подсказка\: фамилия программиста на английском||",
-            parse_mode="MarkdownV2"
+    try:
+        query = update.callback_query
+        await query.answer()
+        
+        if not is_authenticated:
+            await query.edit_message_text(
+                r"Пожалуйста\, введите пароль для доступа\." + "\n" +
+                r"||Подсказка\: фамилия программиста на английском||",
+                parse_mode="MarkdownV2"
+            )
+            return
+
+        await query.edit_message_text("⏳ Проверяю сайты...")
+        result = check_sites()
+        all_sites = "\n".join(result)
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        message = (
+            f"🔍 Все проверенные сайты:\n\n{all_sites}\n\n"
+            f"📅 Дата и время проверки: {current_time}"
         )
-        return
 
-    await query.edit_message_text("⏳ Проверяю сайты...")
-    result = check_sites()
-    all_sites = "\n".join(result)
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    message = (
-        f"🔍 Все проверенные сайты:\n\n{all_sites}\n\n"
-        f"📅 Дата и время проверки: {current_time}"
-    )
+        if len(message) > 4000:
+            message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
 
-    if len(message) > 4000:
-        message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
-
-    keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(message, reply_markup=reply_markup)
+        keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(message, reply_markup=reply_markup)
+        
+    except telegram.error.BadRequest as e:
+        if "Query is too old" in str(e):
+            logging.warning("Callback query expired - ignoring")
+            return
+        raise
+    except Exception as e:
+        logging.error(f"Ошибка в обработчике кнопки: {e}")
+        raise
 
 # --- Проверка Telegram API ---
 async def health_check(app):
@@ -201,63 +212,53 @@ status_cache = {}
 # --- Фоновая проверка ---
 async def background_check(app):
     global status_cache
-
+    logging.info("🔄 Фоновая проверка сайтов запущена")
+    
     while True:
-        logging.info("🌐 Фоновая проверка сайтов...")
-        current_status = {}
-
-        for site in SITES:
-            try:
-                response = requests.get(site, timeout=10)
-                if response.status_code == 200:
-                    current_status[site] = "✅"
-                elif response.status_code >= 500:
-                    current_status[site] = f"❌ {response.status_code}"
-                else:
-                    current_status[site] = f"⚠️ {response.status_code}"
-            except Exception as e:
-                current_status[site] = f"❌ Ошибка: {str(e)}"
-
-        problem_sites = [f"{site} — {current_status[site]}" for site in current_status if current_status[site] in ("❌", "⚠️")]
-        recovered_sites = [
-            site for site in current_status
-            if status_cache.get(site) in ("❌", "⚠️") and current_status[site] == "✅"
-        ]
-
-        status_cache = current_status.copy()
-
-        if problem_sites:
-            if is_authenticated:
+        try:
+            logging.info("🔍 Начинаю новую проверку сайтов...")
+            current_status = {}
+            
+            for site in SITES:
+                try:
+                    response = requests.get(site, timeout=10)
+                    current_status[site] = "✅" if response.status_code == 200 else f"⚠️ {response.status_code}"
+                    logging.info(f"Проверен {site}: {current_status[site]}")
+                except Exception as e:
+                    current_status[site] = f"❌ {str(e)}"
+                    logging.error(f"Ошибка при проверке {site}: {e}")
+                await asyncio.sleep(1)  # Пауза между запросами
+            
+            # Проверка изменений статуса
+            problem_sites = [
+                f"{site} — {status}" 
+                for site, status in current_status.items() 
+                if "❌" in status or "⚠️" in status
+            ]
+            
+            if problem_sites:
                 msg = (
-                    f"⚠️ Обнаружены проблемы:\n"
-                    f"Это автоматическое сообщение от: \n"
-                    f"🕓 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
+                    f"⚠️ Обнаружены проблемы с сайтами:\n"
+                    f"Время проверки: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
                     "\n".join(problem_sites)
                 )
                 try:
-                    logging.info(f"📬 Отправка сообщения с проблемами: {msg}")
-                    await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
-                    send_email("❗ Проблемы с сайтами", msg)
+                    await app.bot.send_message(
+                        chat_id=CHAT_ID,
+                        text=msg[:4000],
+                        disable_notification=False
+                    )
+                    logging.info("Уведомление о проблемах отправлено")
+                    send_email("Проблемы с сайтами", msg)
                 except Exception as e:
-                    error_msg = f"❌ Ошибка при отправке сообщения: {e}"
-                    logging.error(error_msg)
-                    await app.bot.send_message(chat_id=CHAT_ID, text=error_msg)
-                    try:
-                        send_email("❗ Ошибка отправки email", error_msg)
-                    except Exception as email_error:
-                        logging.error(f"❌ Ошибка при отправке email о проблемах: {email_error}")
-            else:
-                logging.info("🔒 Проблемы с сайтами, но сообщение не отправлено — пользователь не авторизован")
-
-        if recovered_sites:
-            if is_authenticated:
-                msg = f"✅ Восстановились:\n" + "\n".join(recovered_sites)
-                logging.info(f"📬 Отправка сообщения о восстановлении: {msg}")
-                await app.bot.send_message(chat_id=CHAT_ID, text=msg, disable_notification=True)
-            else:
-                logging.info("🔒 Восстановленные сайты, но сообщение не отправлено — пользователь не авторизован")
-
-        await asyncio.sleep(60)
+                    logging.error(f"Ошибка отправки уведомления: {e}")
+            
+            status_cache = current_status
+            await asyncio.sleep(300)  # Пауза 5 минут между проверками
+            
+        except Exception as e:
+            logging.error(f"Критическая ошибка в фоновой задаче: {e}")
+            await asyncio.sleep(60)  # Пауза при ошибке
 
 # --- Запуск ---
 async def main():
@@ -268,11 +269,23 @@ async def main():
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, password_check))
 
-    asyncio.create_task(background_check(app))
-    asyncio.create_task(health_check(app))
+    # Создаем и запускаем фоновые задачи
+    bg_check_task = asyncio.create_task(background_check(app))
+    health_task = asyncio.create_task(health_check(app))
 
     logging.info("🚀 Бот запущен")
-    await app.run_polling()
+    
+    try:
+        await app.run_polling()
+    finally:
+        # Корректное завершение фоновых задач
+        bg_check_task.cancel()
+        health_task.cancel()
+        try:
+            await bg_check_task
+            await health_task
+        except asyncio.CancelledError:
+            logging.info("Фоновые задачи корректно завершены")
 
 if __name__ == "__main__":
     try:
