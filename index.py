@@ -16,6 +16,8 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     ContextTypes,
+    MessageHandler,
+    filters
 )
 
 # --- Загрузка переменных ---
@@ -251,7 +253,7 @@ async def main():
     app.add_handler(CallbackQueryHandler(button_handler))
 
     # Обработчик для ввода пароля
-    app.add_handler(MessageHandler(Filters.text & ~Filters.command, password_check))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, password_check))
 
     asyncio.create_task(background_check(app))
     asyncio.create_task(health_check(app))
