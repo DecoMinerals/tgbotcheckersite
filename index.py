@@ -86,7 +86,7 @@ def send_email(subject, body):
         msg['From'] = SENDER_EMAIL
         msg['To'] = RECEIVER_EMAIL
         msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        msg.attach(MIMEText(body, 'html', 'utf-8'))
 
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
@@ -250,7 +250,7 @@ async def health_check(app):
                 send_email("🚨 Бот недоступен", f"Ошибка: {e}")
             except Exception:
                 logging.error("❌ Не удалось отправить email о сбое бота")
-        await asyncio.sleep(600)
+        await asyncio.sleep(1200)  # Увеличена задержка между запросами
 
 # --- Кэш статусов ---
 status_cache = {}
@@ -317,9 +317,11 @@ async def background_check(app):
 
             if problem_sites:
                 msg = (
-                    f"⚠️ Обнаружены проблемы с сайтами:\n"
-                    f"Время проверки: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
-                    "\n".join(problem_sites)
+                    f"<h2>⚠️ Обнаружены проблемы с сайтами</h2>\n"
+                    f"<p><strong>Время проверки:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>\n"
+                    f"<ul>" +
+                    "".join([f"<li>{site}</li>" for site in problem_sites]) +
+                    "</ul>"
                 )
                 try:
                     await app.bot.send_message(
@@ -333,7 +335,7 @@ async def background_check(app):
                     logging.error(f"Ошибка отправки уведомления: {e}")
 
             status_cache = current_status
-            await asyncio.sleep(300)  # Пауза 5 минут между проверками
+            await asyncio.sleep(600)  # Пауза 10 минут между проверками
 
         except Exception as e:
             logging.error(f"Критическая ошибка в фоновой задаче: {e}")
@@ -370,17 +372,7 @@ async def main():
         # Корректное завершение фоновых задач
         bg_check_task.cancel()
         health_task.cancel()
-        try:
-            await bg_check_task
-            await health_task
-        except asyncio.CancelledError:
-            logging.info("Фоновые задачи корректно завершены")
+        logging.info("Бот завершил работу")
 
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("🛑 Остановлен пользователем")
-    except Exception as e:
-        logging.error(f"❌ Ошибка запуска: {e}")
-        print(f"❌ Ошибка запуска: {e}")
+if __name__ == '__main__':
+    asyncio.run(main())
