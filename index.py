@@ -214,22 +214,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Формируем список с проблемными сайтами
-        problem_sites = [status for status in result if "❌" in status or "⚠️" in status]
+      problem_sites = [
+    f"{site} — {status}"
+    for site, status in current_status.items()
+    if "❌" in status or "⚠️" in status
+]
 
-        # Если есть проблемы, показываем сообщение о проблемах
-      if problem_sites:
+# Для отладки
+print(f"problem_sites: {problem_sites}")
+
+if problem_sites:
     message = (
         f"⚠️ Обнаружены проблемы с сайтами\n\n"
         f"Время проверки: {current_time}\n\n"
         f"{'\n'.join(problem_sites)}"
     )
 else:
-    # Если все сайты в порядке, отправляем сообщение о том, что все работает нормально
     message = (
         f"✅ Все сайты работают корректно\n\n"
         f"Время проверки: {current_time}\n"
         "Все сайты работают без ошибок!"
     )
+
 
 
         if len(message) > 4000:
