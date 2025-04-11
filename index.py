@@ -65,6 +65,7 @@ SITES = [
     "https://decocopper.pro",
     "https://decotech.pro",
     "https://decofry.ru",
+    "https://rfrp36.ru/",
 ]
 
 # --- Логирование ---
@@ -187,43 +188,52 @@ def send_email_if_needed(statuses):
         send_email("Проблемы с сайтами", message)
 
 # --- Обработка кнопки ---
+# --- Внутри async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE): ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+    try:
+        query = update.callback_query
+        await query.answer()
 
-    if not is_authenticated:
-        await query.edit_message_text(
-            r"Пожалуйста\, введите пароль для доступа\." + "\n" +
-            r"||Подсказка\: фамилия программиста на английском||",
-            parse_mode="MarkdownV2"
-        )
-        return
+        if not is_authenticated:
+            await query.edit_message_text(
+                r"Пожалуйста\, введите пароль для доступа\." + "\n" +
+                r"||Подсказка\: фамилия программиста на английском||",
+                parse_mode="MarkdownV2"
+            )
+            return
 
-    await query.edit_message_text("⏳ Проверяю сайты...")
-    result = check_sites()
-    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    problem_sites = [s for s in result if "❌" in s or "⚠️" in s]
+        await query.edit_message_text("⏳ Проверяю сайты...")
+        result = check_sites()
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    if problem_sites:
-        message = (
-            f"⚠️ Обнаружены проблемы с сайтами\n\n"
-            f"Время проверки: {current_time}\n\n" +
-            "\n".join(problem_sites)
-        )
+        # Собираем все статусы для отображения, ошибки — с кодами
+        message_lines = [
+            f"🔍 Результаты проверки сайтов",
+            f"Время: {current_time}\n"
+        ] + result
+
+        message = "\n".join(message_lines)
+
+        # Отправить email, если есть проблемы
         send_email_if_needed(result)
-    else:
-        message = (
-            f"✅ Все сайты работают корректно\n\n"
-            f"Время проверки: {current_time}\n"
-            "Все сайты работают без ошибок!"
-        )
 
-    if len(message) > 4000:
-        message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
+        # Сокращаем сообщение, если превышает лимит Telegram
+        if len(message) > 4000:
+            message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
 
-    keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(message, reply_markup=reply_markup)
+        keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.edit_message_text(message, reply_markup=reply_markup)
+
+    except telegram.error.BadRequest as e:
+        if "Query is too old" in str(e):
+            logging.warning("Callback query expired - ignoring")
+            return
+        raise
+    except Exception as e:
+        logging.error(f"Ошибка в обработчике кнопки: {e}")
+        raise
+
 
 # --- Фоновая проверка ---
 async def background_check(app):
