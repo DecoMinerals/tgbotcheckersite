@@ -153,10 +153,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     if not is_authenticated:
-        await query.edit_message_text(
+               await query.edit_message_text(
             "❌ Пожалуйста, введите пароль для доступа.\n"
-            "<tg-spoiler>Подсказка: фамилия программиста</tg-spoiler>",
-            parse_mode="HTML"
+            r"`Подсказка: фамилия программиста`",
+            parse_mode="MarkdownV2"
         )
         return
 
