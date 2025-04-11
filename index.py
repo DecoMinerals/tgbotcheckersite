@@ -1,12 +1,12 @@
 import nest_asyncio
 nest_asyncio.apply()
 
+from datetime import datetime
 import os
 import logging
 import requests
 import smtplib
 import asyncio
-from datetime import datetime
 from dotenv import load_dotenv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -18,8 +18,9 @@ from telegram.ext import (
     ContextTypes,
 )
 
-# Загрузка переменных окружения
+# --- Загрузка переменных ---
 load_dotenv()
+
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('CHAT_ID')
 SMTP_SERVER = os.getenv('SMTP_SERVER')
@@ -28,6 +29,7 @@ SENDER_EMAIL = os.getenv('SENDER_EMAIL')
 SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')
 RECEIVER_EMAIL = os.getenv('RECEIVER_EMAIL')
 
+# --- Список сайтов ---
 SITES = [
     "https://decominerals.ru",
     "https://stevent.ru",
@@ -60,15 +62,19 @@ SITES = [
     "https://rfrp36.ru/"
 ]
 
+# --- Логирование ---
 logging.basicConfig(
-    filename="bot.log",
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("bot.log", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
 )
 
 print("✅ Запуск бота...")
-site_statuses = {}
 
+# --- Email отправка ---
 def send_email(subject, body):
     try:
         msg = MIMEMultipart()
@@ -81,146 +87,162 @@ def send_email(subject, body):
             server.starttls()
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
-            logging.info(f"Email отправлен на {RECEIVER_EMAIL}")
+            logging.info(f"📧 Email отправлен на {RECEIVER_EMAIL}")
+            print(f"📧 Email отправлен на {RECEIVER_EMAIL}")
     except Exception as e:
-        logging.error(f"Ошибка при отправке email: {str(e)}")
+        logging.error(f"❌ Ошибка при отправке email: {str(e)}")
+        raise  # пробрасываем ошибку для обработки выше
 
-async def double_check_site(site):
-    try:
-        first_try = requests.get(site, timeout=10)
-        if first_try.status_code == 200:
-            return "ok"
-        await asyncio.sleep(2)
-        second_try = requests.get(site, timeout=10)
-        if second_try.status_code == 200:
-            return "ok"
-        return f"warn {second_try.status_code}"
-    except Exception:
-        return "fail"
-
-async def perform_check(app, is_manual=False):
-    global site_statuses
-    message_lines = []
-    restored_sites = []
-    failed_sites = []
-    warned_sites = []
-
-    for site in SITES:
-        new_status = await double_check_site(site)
-        old_status = site_statuses.get(site, "unknown")
-
-        if new_status == "ok":
-            status_text = "✅ работает"
-        elif "warn" in new_status:
-            status_text = f"⚠️ ошибка: код {new_status.split()[-1]}"
-        else:
-            status_text = "❌ сайт недоступен"
-
-        if old_status != "ok" and new_status == "ok":
-            restored_sites.append(site)
-
-        if new_status == "fail":
-            failed_sites.append(f"{site} — {status_text}")
-        elif "warn" in new_status:
-            warned_sites.append(f"{site} — {status_text}")
-
-        site_statuses[site] = new_status
-        message_lines.append(f"{site} — {status_text}")
-
-    print(f"✅ Проверка завершена: {len(SITES)} сайтов проверено")
-    logging.info(f"Проверка завершена: {len(SITES)} сайтов проверено")
-
-    if failed_sites:
-        print(f"❌ Критические ошибки: {len(failed_sites)}")
-        logging.warning(f"Критические ошибки: {len(failed_sites)}")
-    if warned_sites:
-        print(f"⚠️ Предупреждения: {len(warned_sites)}")
-        logging.info(f"Предупреждения: {len(warned_sites)}")
-    if restored_sites:
-        print(f"🟢 Восстановлены сайты: {', '.join(restored_sites)}")
-        logging.info(f"Восстановлены сайты: {', '.join(restored_sites)}")
-
-    summary = f"🔍 Проверено {len(SITES)} сайтов\n❗ Критических: {len(failed_sites)} | Предупреждений: {len(warned_sites)}\n"
-    if failed_sites or warned_sites:
-        details = "\n".join(failed_sites + warned_sites)
-    else:
-        details = "\n".join(message_lines)
-
-    if len(details) > 3800:
-        details = details[:3800] + "\n\n⚠️ Сообщение обрезано из-за лимита Telegram"
-
-    keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    final_message = summary + "\n\n" + details
-
-    if is_manual:
-        await app.bot.send_message(chat_id=CHAT_ID, text=final_message, reply_markup=reply_markup)
-    else:
-        if failed_sites:
-            await app.bot.send_message(chat_id=CHAT_ID, text=final_message, reply_markup=reply_markup, disable_notification=False)
-            send_email("❌ Критические сбои сайтов", final_message)
-        elif warned_sites:
-            await app.bot.send_message(chat_id=CHAT_ID, text=final_message, reply_markup=reply_markup, disable_notification=True)
-            send_email("⚠️ Предупреждения по сайтам", final_message)
-
-    if restored_sites:
-        restored_text = "🟢 Сайты восстановлены:\n" + "\n".join(restored_sites)
-        await app.bot.send_message(chat_id=CHAT_ID, text=restored_text, disable_notification=True)
-        logging.info(f"Восстановлены сайты: {restored_sites}")
-
+# --- Команда /start ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"👋 Привет! Я бот для мониторинга {len(SITES)} сайтов.\nНажми кнопку ниже, чтобы проверить статус.",
+        f"👋 Привет! Я бот для мониторинга {len(SITES)} сайтов.\n"
+        "Нажми кнопку ниже, чтобы проверить статус.",
         reply_markup=reply_markup
     )
 
+# --- Команда /ping ---
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🏓 Бот работает!")
 
+# --- Проверка сайтов вручную ---
+def check_sites():
+    result = []
+    for site in SITES:
+        try:
+            response = requests.get(site, timeout=10)
+            if response.status_code == 200:
+                status = "✅ работает"
+            else:
+                status = f"⚠️ код {response.status_code}"
+            logging.info(f"{site} — {status}")
+        except requests.exceptions.RequestException as e:
+            status = f"❌ ошибка: {e}"
+            logging.error(f"{site} — {status}")
+        result.append(f"{site} — {status}")
+    return result
+
+# --- Обработка кнопки ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await query.edit_message_text("⏳ Проверяю сайты... Пожалуйста, подождите.")
-    await perform_check(app=context.application, is_manual=True)
+    await query.edit_message_text("⏳ Проверяю сайты...")
 
-async def background_check(app):
-    while True:
-        await perform_check(app)
-        await asyncio.sleep(60)
+    result = check_sites()
+    problem_sites = [r for r in result if "❌" in r or "⚠️" in r]
+    total_sites = len(SITES)
+    problem_count = len(problem_sites)
 
+    message = (
+        f"🔍 Проверено {total_sites} сайтов\n"
+        f"❗ Проблемных: {problem_count}\n\n" +
+        "\n".join(problem_sites if problem_sites else ["✅ Все сайты работают"])
+    )
+
+    if len(message) > 4000:
+        message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
+
+    keyboard = [[InlineKeyboardButton("🔄 Проверить снова", callback_data="check")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(message, reply_markup=reply_markup)
+
+# --- Проверка Telegram API ---
 async def health_check(app):
     while True:
         try:
             await app.bot.get_me()
-            print("✅ Health check: бот отвечает Telegram API")
-            logging.info("Health check: бот работает нормально")
+            logging.info("✅ Бот жив и отвечает Telegram API")
         except Exception as e:
-            error_message = f"❌ Бот не отвечает: {e}"
-            print(error_message)
-            logging.error(error_message)
-            await app.bot.send_message(chat_id=CHAT_ID, text="🚨 Бот не отвечает Telegram API!")
-            send_email("🚨 Ошибка бота Telegram", error_message)
+            logging.error(f"❌ Telegram API недоступен: {e}")
+            try:
+                await app.bot.send_message(chat_id=CHAT_ID, text="🚨 Проблема с Telegram API!")
+            except Exception:
+                pass
+            try:
+                send_email("🚨 Бот недоступен", f"Ошибка: {e}")
+            except Exception:
+                logging.error("❌ Не удалось отправить email о сбое бота")
         await asyncio.sleep(600)
 
+# --- Кэш статусов ---
+status_cache = {}
+
+# --- Фоновая проверка ---
+async def background_check(app):
+    global status_cache
+
+    while True:
+        logging.info("🌐 Фоновая проверка сайтов...")
+        current_status = {}
+
+        for site in SITES:
+            try:
+                response = requests.get(site, timeout=10)
+                if response.status_code == 200:
+                    current_status[site] = "✅"
+                elif response.status_code >= 500:
+                    current_status[site] = "❌"
+                else:
+                    current_status[site] = "⚠️"
+            except Exception:
+                current_status[site] = "❌"
+
+        # Найдём проблемы
+        problem_sites = [f"{site} — {current_status[site]}" for site in current_status if current_status[site] in ("❌", "⚠️")]
+
+        # Найдём восстановленные
+        recovered_sites = [
+            site for site in current_status
+            if status_cache.get(site) in ("❌", "⚠️") and current_status[site] == "✅"
+        ]
+
+        # Обновляем кэш
+        status_cache = current_status.copy()
+
+        # Уведомление о проблемах
+        if problem_sites:
+            msg = (
+                f"⚠️ Обнаружены проблемы:\n"
+                f"🕓 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
+                "\n".join(problem_sites)
+            )
+
+            try:
+                await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
+                send_email("❗ Проблемы с сайтами", msg)
+            except Exception as e:
+                error_msg = f"❌ Email не отправлен: {e}"
+                logging.error(error_msg)
+                await app.bot.send_message(chat_id=CHAT_ID, text=error_msg)
+
+        # Уведомление о восстановлении (без звука)
+        if recovered_sites:
+            msg = f"✅ Восстановились:\n" + "\n".join(recovered_sites)
+            await app.bot.send_message(chat_id=CHAT_ID, text=msg, disable_notification=True)
+
+        await asyncio.sleep(60)
+
+# --- Запуск ---
 async def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(CallbackQueryHandler(button_handler))
+
     asyncio.create_task(background_check(app))
     asyncio.create_task(health_check(app))
-    print("🚀 Бот запущен и готов к работе!")
-    logging.info("Бот запущен")
+
+    logging.info("🚀 Бот запущен")
     await app.run_polling()
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logging.info("Бот остановлен пользователем")
-        print("🛑 Бот остановлен пользователем")
+        print("🛑 Остановлен пользователем")
     except Exception as e:
-        logging.error(f"Ошибка при запуске: {e}")
-        print(f"❌ Ошибка при запуске: {e}")
+        logging.error(f"❌ Ошибка запуска: {e}")
+        print(f"❌ Ошибка запуска: {e}")
