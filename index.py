@@ -208,11 +208,11 @@ async def background_check(app):
                 if response.status_code == 200:
                     current_status[site] = "✅"
                 elif response.status_code >= 500:
-                    current_status[site] = "❌"
+                    current_status[site] = f"❌ {response.status_code}"  # Добавлен код ошибки
                 else:
-                    current_status[site] = "⚠️"
-            except Exception:
-                current_status[site] = "❌"
+                    current_status[site] = f"⚠️ {response.status_code}"  # Добавлен код ошибки
+            except Exception as e:
+                current_status[site] = f"❌ Ошибка: {str(e)}"  # Добавлен текст ошибки
 
         # Найдём проблемы
         problem_sites = [f"{site} — {current_status[site]}" for site in current_status if current_status[site] in ("❌", "⚠️")]
