@@ -258,6 +258,7 @@ async def health_check(app):
 status_cache = {}
 
 # --- Фоновая проверка ---
+# --- Фоновая проверка ---  
 async def background_check(app):
     global status_cache
     logging.info("🔄 Фоновая проверка сайтов запущена")
@@ -333,6 +334,23 @@ async def background_check(app):
                     send_email("Проблемы с сайтами", msg)
                 except Exception as e:
                     logging.error(f"Ошибка отправки уведомления: {e}")
+            else:
+                # Все сайты работают нормально
+                msg = (
+                    f"✅ Все сайты работают корректно\n\n"
+                    f"Время проверки: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    "Все сайты работают без ошибок!"
+                )
+                try:
+                    await app.bot.send_message(
+                        chat_id=CHAT_ID,
+                        text=msg[:4000],
+                        disable_notification=True  # Без звукового уведомления
+                    )
+                    logging.info("Уведомление о нормальной работе сайтов отправлено")
+                    send_email("Все сайты работают корректно", msg)
+                except Exception as e:
+                    logging.error(f"Ошибка отправки уведомления: {e}")
 
             status_cache = current_status
             await asyncio.sleep(300)  # Пауза 5 минут между проверками
@@ -340,6 +358,7 @@ async def background_check(app):
         except Exception as e:
             logging.error(f"Критическая ошибка в фоновой задаче: {e}")
             await asyncio.sleep(30)  # Пауза при ошибке
+
 
 # --- Запуск ---
 async def main():
