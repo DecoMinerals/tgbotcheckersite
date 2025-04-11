@@ -213,9 +213,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = check_sites()
         all_sites = "\n".join(result)
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Форматируем сообщение для бота
         message = (
-            f"🔍 Все проверенные сайты:\n\n{all_sites}\n\n"
-            f"📅 Дата и время проверки: {current_time}"
+            f"⚠️ Обнаружены проблемы с сайтами\n\n"
+            f"Время проверки: {current_time}\n\n"
+            f"{all_sites}"
         )
 
         if len(message) > 4000:
@@ -317,11 +320,9 @@ async def background_check(app):
 
             if problem_sites:
                 msg = (
-                    f"<h2>⚠️ Обнаружены проблемы с сайтами</h2>\n"
-                    f"<p><strong>Время проверки:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>\n"
-                    f"<ul>" +
-                    "".join([f"<li>{site}</li>" for site in problem_sites]) +
-                    "</ul>"
+                    f"⚠️ Обнаружены проблемы с сайтами\n\n"
+                    f"Время проверки: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n" +
+                    "\n".join(problem_sites)
                 )
                 try:
                     await app.bot.send_message(
@@ -355,24 +356,20 @@ async def main():
 
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
+    # Регистрируем хендлеры
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ping", ping))
-    app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, password_check))
+    app.add_handler(CallbackQueryHandler(button_handler))
 
-    # Создаем и запускаем фоновые задачи
-    bg_check_task = asyncio.create_task(background_check(app))
-    health_task = asyncio.create_task(health_check(app))
+    # Фоновая задача для проверки
+    asyncio.create_task(background_check(app))
 
-    logging.info("🚀 Бот запущен")
+    # Проверка состояния Telegram API
+    asyncio.create_task(health_check(app))
 
-    try:
-        await app.run_polling()
-    finally:
-        # Корректное завершение фоновых задач
-        bg_check_task.cancel()
-        health_task.cancel()
-        logging.info("Бот завершил работу")
+    # Запуск бота
+    await app.run_polling()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
