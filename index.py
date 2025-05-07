@@ -251,12 +251,12 @@ async def background_check(app):
                 )
                 await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
                 send_email("Проблемы с сайтами", msg)
-            else:
-                msg = (
-                    f"✅ Все сайты работают корректно\n\n"
-                    f"Время проверки: {current_time}\n"
-                    "Все сайты работают без ошибок!"
-                )
+            # else:
+            #     msg = (
+            #         f"✅ Все сайты работают корректно\n\n"
+            #         f"Время проверки: {current_time}\n"
+            #         "Все сайты работают без ошибок!"
+            #     )
                 await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000], disable_notification=True)
 
         except Exception as e:
