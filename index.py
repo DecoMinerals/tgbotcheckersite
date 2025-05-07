@@ -44,7 +44,7 @@ SITES = [
     "https://decofiltr.ru",
     "https://decomol.ru",
     "https://decoseeds.ru",
-    "https://halofiltr.ru",
+    # "https://halofiltr.ru",
     "https://benteco.ru",
     "https://amitox.ru",
     "https://decoguard.ru",
