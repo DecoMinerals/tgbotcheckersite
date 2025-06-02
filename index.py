@@ -170,8 +170,8 @@ def check_sites():
 
         except requests.exceptions.SSLError as e:
             result.append(f"⚠️ {site} ошибка SSL: {str(e)}")
-        except requests.exceptions.Timeout:
-            result.append(f"⚠️ {site} таймаут соединения")
+        # except requests.exceptions.Timeout:
+        #     result.append(f"⚠️ {site} таймаут соединения")
         except requests.exceptions.ConnectionError:
             result.append(f"❌ {site} ошибка подключения")
         except Exception as e:
