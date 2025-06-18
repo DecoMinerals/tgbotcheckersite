@@ -275,11 +275,11 @@ async def background_check(app):
 
                 send_email("Проблемы с сайтами", msg)
                 success = send_short_email_to_timeweb(problem_sites)
-                success = send_short_email_to_timeweb(problem_sites)
+
                 if success:
-                    await query.message.reply_text("✅ Email отправлен в Timeweb.")
+                    await app.message.reply_text("✅ Email отправлен в Timeweb.")
                 else:
-                    await query.message.reply_text("❌ Не удалось отправить email в Timeweb!")
+                    await app.message.reply_text("❌ Не удалось отправить email в Timeweb!")
 
 
                 # Уведомление в Telegram
