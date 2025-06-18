@@ -64,6 +64,7 @@ SITES = [
     "https://decocopper.pro",
     "https://decotech.pro",
     "https://decofry.ru",
+    "https://проверка. рф"
 ]
 
 # --- Логирование ---
