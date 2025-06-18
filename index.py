@@ -120,7 +120,7 @@ def send_short_email_to_timeweb(problem_sites):
 
     except Exception as e:
         logging.error(f"❌ Ошибка при отправке email в Timeweb: {str(e)}")
-        await update.message.reply_text(`❌ Ошибка при отправке email в Timeweb: {str(e)}`)
+        await update.message.reply_text("❌ Ошибка при отправке email в Timeweb:" + {str(e)})
 
 
 # --- Авторизация ---
