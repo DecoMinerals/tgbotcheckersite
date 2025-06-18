@@ -97,13 +97,19 @@ def send_email(subject, body):
         logging.error(f"❌ Ошибка при отправке email: {str(e)}")
 
 # --- Дополнительный email для Timeweb ---
+# --- Дополнительный email для Timeweb ---
 def send_short_email_to_timeweb(problem_sites):
     try:
-     short_message = "Здравствуйте, это автоматическое сообщение при нарушении работы наших сайтов. \n Убедительная просьба решить проблему, возможно откатить резервную копию. \n Сайт stevent.ru если сломан, то скорее всего он кэширует данные плагинами, можно попробовать их отключить. \n Обнаружены следующие проблемы с сайтами:\n\n" + "\n".join(problem_sites)
+        short_message = (
+            "Здравствуйте, это автоматическое сообщение при нарушении работы наших сайтов. \n"
+            "Убедительная просьба решить проблему, возможно откатить резервную копию. \n"
+            "Сайт stevent.ru если сломан, то скорее всего он кэширует данные плагинами, можно попробовать их отключить. \n"
+            "Обнаружены следующие проблемы с сайтами:\n\n" + "\n".join(problem_sites)
+        )
 
         msg = MIMEMultipart()
         msg['From'] = SENDER_EMAIL
-        msg['To'] = "mishca29954@mail.ru"
+        msg['To'] = "mishca29954@mail.ru"  # тестовый адрес, не Timeweb
         msg['Subject'] = "Сайты не работают"
         msg.attach(MIMEText(short_message, 'plain', 'utf-8'))
 
@@ -111,9 +117,10 @@ def send_short_email_to_timeweb(problem_sites):
             server.starttls()
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
-            logging.info("📧 Email отправлен на info@timeweb.ru")
+            logging.info("📧 Email отправлен на mishca29954@mail.ru")
     except Exception as e:
         logging.error(f"❌ Ошибка при отправке email в Timeweb: {str(e)}")
+
 
 # --- Авторизация ---
 is_authenticated = False
