@@ -271,18 +271,14 @@ async def background_check(app):
                     f"Время проверки: {current_time}\n\n" +
                     "\n".join(problem_sites)
                 )
+
+                # Отправка уведомлений
                 await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
 
                 send_email("Проблемы с сайтами", msg)
                 success = send_short_email_to_timeweb(problem_sites)
 
-                if success:
-                    await app.message.reply_text("✅ Email отправлен в Timeweb.")
-                else:
-                    await app.message.reply_text("❌ Не удалось отправить email в Timeweb!")
-
-
-                # Уведомление в Telegram
+                # Telegram-уведомление об отправке email
                 if success:
                     await app.bot.send_message(chat_id=CHAT_ID, text="✅ Email отправлен в Timeweb.")
                 else:
@@ -291,7 +287,8 @@ async def background_check(app):
         except Exception as e:
             logging.error(f"Ошибка в фоновом процессе: {e}")
 
-        await asyncio.sleep(60 * 5)
+        await asyncio.sleep(60 * 5)  # Пауза 5 минут
+
 
 
 # --- Запуск бота ---
