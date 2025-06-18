@@ -64,7 +64,6 @@ SITES = [
     "https://decocopper.pro",
     "https://decotech.pro",
     "https://decofry.ru",
-    "https://проверка. рф",
 ]
 
 # --- Логирование ---
@@ -100,7 +99,7 @@ def send_email(subject, body):
 def send_short_email_to_timeweb(problem_sites):
     try:
         short_message = (
-            "Здравствуйте, логин нашего аккаунта ct04655. /nЭто автоматическое сообщение при нарушении работы наших сайтов. \n\n"
+            "Здравствуйте, логин нашего аккаунта ct04655. \nЭто автоматическое сообщение при нарушении работы наших сайтов. \n\n"
             "Убедительная просьба решить проблему, возможно откатить резервную копию. \n"
             "Сайт stevent.ru если сломан, то скорее всего он кэширует данные плагинами, можно попробовать их отключить. \n\n"
             "Обнаружены следующие проблемы с сайтами:\n\n" + "\n".join(problem_sites) + "\n\n\nP.S. Извините за возможный СПАМ, я просто в отъезде и поэтому автоматизировал запрос Вам. Пожалуйста, не добавляйте в черный список нас! \n\nКак только проблема решиться сообщения перестанут к Вам приходить!"
@@ -117,8 +116,11 @@ def send_short_email_to_timeweb(problem_sites):
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
             logging.info("📧 Email отправлен на info@timeweb.ru")
+            await update.message.reply_text("📧 Email отправлен на info@timeweb.ru")
+
     except Exception as e:
         logging.error(f"❌ Ошибка при отправке email в Timeweb: {str(e)}")
+        await update.message.reply_text(`❌ Ошибка при отправке email в Timeweb: {str(e)}`)
 
 
 # --- Авторизация ---
