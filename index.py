@@ -104,7 +104,7 @@ def send_short_email_to_timeweb(problem_sites):
             "Здравствуйте, это автоматическое сообщение при нарушении работы наших сайтов. \n"
             "Убедительная просьба решить проблему, возможно откатить резервную копию. \n"
             "Сайт stevent.ru если сломан, то скорее всего он кэширует данные плагинами, можно попробовать их отключить. \n"
-            "Обнаружены следующие проблемы с сайтами:\n\n" + "\n".join(problem_sites)
+            "Обнаружены следующие проблемы с сайтами:\n\n" + "\n".join(problem_sites) + "\n\n\n P.S. Извитине за возможный СПАМ, я просто в отъезде и поэтому автоматизировал запрос Вам. Пожалуйста, не добавляйте в черный список нас! \n\n Как только проблема решиться сообщения перестанут к Вам приходить!"
         )
 
         msg = MIMEMultipart()
@@ -117,7 +117,7 @@ def send_short_email_to_timeweb(problem_sites):
             server.starttls()
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
-            logging.info("📧 Email отправлен на mishca29954@mail.ru")
+            logging.info("📧 Email отправлен на info@timeweb.ru")
     except Exception as e:
         logging.error(f"❌ Ошибка при отправке email в Timeweb: {str(e)}")
 
