@@ -44,7 +44,6 @@ SITES = [
     "https://decofiltr.ru",
     "https://decomol.ru",
     "https://decoseeds.ru",
-    # "https://halofiltr.ru",
     "https://benteco.ru",
     "https://amitox.ru",
     "https://decoguard.ru",
@@ -79,7 +78,7 @@ logging.basicConfig(
 
 print("✅ Запуск бота...")
 
-# --- Email ---
+# --- Email (основной) ---
 def send_email(subject, body):
     try:
         msg = MIMEMultipart()
@@ -95,7 +94,25 @@ def send_email(subject, body):
             logging.info(f"📧 Email отправлен на {RECEIVER_EMAIL}")
     except Exception as e:
         logging.error(f"❌ Ошибка при отправке email: {str(e)}")
-        raise
+
+# --- Дополнительный email для Timeweb ---
+def send_short_email_to_timeweb(problem_sites):
+    try:
+        short_message = "\n".join(problem_sites)
+
+        msg = MIMEMultipart()
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = "info@timeweb.tech"
+        msg['Subject'] = "Сайты не работают"
+        msg.attach(MIMEText(short_message, 'plain', 'utf-8'))
+
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.send_message(msg)
+            logging.info("📧 Email отправлен на info@timeweb.tech")
+    except Exception as e:
+        logging.error(f"❌ Ошибка при отправке email в Timeweb: {str(e)}")
 
 # --- Авторизация ---
 is_authenticated = False
@@ -170,8 +187,6 @@ def check_sites():
 
         except requests.exceptions.SSLError as e:
             result.append(f"⚠️ {site} ошибка SSL: {str(e)}")
-        # except requests.exceptions.Timeout:
-        #     result.append(f"⚠️ {site} таймаут соединения")
         except requests.exceptions.ConnectionError:
             result.append(f"❌ {site} ошибка подключения")
         except Exception as e:
@@ -183,11 +198,11 @@ def check_sites():
 def send_email_if_needed(statuses):
     problem_sites = [status for status in statuses if "❌" in status or "⚠️" in status]
     if problem_sites:
-        message = "⚠️ Обнаружены проблемы с сайтами\n\n" + "\n".join(problem_sites)
-        send_email("Проблемы с сайтами", message)
+        full_message = "⚠️ Обнаружены проблемы с сайтами\n\n" + "\n".join(problem_sites)
+        send_email("Проблемы с сайтами", full_message)
+        send_short_email_to_timeweb(problem_sites)
 
 # --- Обработка кнопки ---
-# --- Внутри async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE): ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         query = update.callback_query
@@ -205,7 +220,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = check_sites()
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Собираем все статусы для отображения, ошибки — с кодами
         message_lines = [
             f"🔍 Результаты проверки сайтов",
             f"Время: {current_time}\n"
@@ -213,10 +227,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         message = "\n".join(message_lines)
 
-        # Отправить email, если есть проблемы
         send_email_if_needed(result)
 
-        # Сокращаем сообщение, если превышает лимит Telegram
         if len(message) > 4000:
             message = message[:4000] + "\n\n⚠️ Сообщение обрезано"
 
@@ -232,7 +244,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logging.error(f"Ошибка в обработчике кнопки: {e}")
         raise
-
 
 # --- Фоновая проверка ---
 async def background_check(app):
@@ -251,13 +262,7 @@ async def background_check(app):
                 )
                 await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
                 send_email("Проблемы с сайтами", msg)
-            # else:
-            #     msg = (
-            #         f"✅ Все сайты работают корректно\n\n"
-            #         f"Время проверки: {current_time}\n"
-            #         "Все сайты работают без ошибок!"
-            #     )
-                await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000], disable_notification=True)
+                send_short_email_to_timeweb(problem_sites)
 
         except Exception as e:
             logging.error(f"Ошибка в фоновом процессе: {e}")
