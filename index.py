@@ -116,11 +116,11 @@ def send_short_email_to_timeweb(problem_sites):
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
             logging.info("📧 Email отправлен на info@timeweb.ru")
-            await update.message.reply_text("📧 Email отправлен на info@timeweb.ru")
+             update.message.reply_text("📧 Email отправлен на info@timeweb.ru")
 
     except Exception as e:
         logging.error(f"❌ Ошибка при отправке email в Timeweb: {str(e)}")
-        await update.message.reply_text("❌ Ошибка при отправке email в Timeweb:" + {str(e)})
+        update.message.reply_text("❌ Ошибка при отправке email в Timeweb:" + {str(e)})
 
 
 # --- Авторизация ---
