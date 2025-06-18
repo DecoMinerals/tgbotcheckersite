@@ -117,11 +117,12 @@ def send_short_email_to_timeweb(problem_sites):
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
             logging.info("📧 Email отправлен на info@timeweb.ru")
-            update.message.reply_text("📧 Email отправлен на info@timeweb.ru")
+            return True
 
     except Exception as e:
         logging.error(f"❌ Ошибка при отправке email в Timeweb: {str(e)}")
-        update.message.reply_text("❌ Ошибка при отправке email в Timeweb:" + {str(e)})
+        return False
+
 
 
 # --- Авторизация ---
@@ -271,13 +272,27 @@ async def background_check(app):
                     "\n".join(problem_sites)
                 )
                 await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
+
                 send_email("Проблемы с сайтами", msg)
-                send_short_email_to_timeweb(problem_sites)
+                success = send_short_email_to_timeweb(problem_sites)
+                success = send_short_email_to_timeweb(problem_sites)
+                if success:
+                    await query.message.reply_text("✅ Email отправлен в Timeweb.")
+                else:
+                    await query.message.reply_text("❌ Не удалось отправить email в Timeweb!")
+
+
+                # Уведомление в Telegram
+                if success:
+                    await app.bot.send_message(chat_id=CHAT_ID, text="✅ Email отправлен в Timeweb.")
+                else:
+                    await app.bot.send_message(chat_id=CHAT_ID, text="❌ Не удалось отправить email в Timeweb!")
 
         except Exception as e:
             logging.error(f"Ошибка в фоновом процессе: {e}")
 
         await asyncio.sleep(60 * 5)
+
 
 # --- Запуск бота ---
 if __name__ == "__main__":
