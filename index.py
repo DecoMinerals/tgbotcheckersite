@@ -64,7 +64,6 @@ SITES = [
     "https://decocopper.pro",
     "https://decotech.pro",
     "https://decofry.ru",
-    "https://проверка. рф"
 ]
 
 # --- Логирование ---
@@ -108,7 +107,7 @@ def send_short_email_to_timeweb(problem_sites):
 
         msg = MIMEMultipart()
         msg['From'] = SENDER_EMAIL
-        msg['To'] = "mishca29954@mail.ru"
+        msg['To'] = "info@timeweb.ru"
         msg['Subject'] = "Сайты не работают"
         msg.attach(MIMEText(short_message, 'plain', 'utf-8'))
 
