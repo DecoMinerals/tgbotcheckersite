@@ -199,8 +199,8 @@ def check_sites():
             result.append(f"⚠️ {site} ошибка SSL: {str(e)}")
         except requests.exceptions.ConnectionError:
             result.append(f"❌ {site} ошибка подключения")
-        except Exception as e:
-            result.append(f"❌ {site} непредвиденная ошибка: {str(e)}")
+        # except Exception as e:
+        #     result.append(f"❌ {site} непредвиденная ошибка: {str(e)}")
 
     return result
 
