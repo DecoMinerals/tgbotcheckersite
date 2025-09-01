@@ -272,6 +272,14 @@ async def background_check(app):
                     "\n".join(problem_sites)
                 )
 
+                keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            f"👋 Привет! Я бот для мониторинга {len(SITES)} сайтов.\n"
+            "Нажми кнопку ниже, чтобы проверить статус.",
+            reply_markup=reply_markup
+        )
+
                 # Отправка уведомлений
                 await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
 
