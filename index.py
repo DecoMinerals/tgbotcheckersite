@@ -212,7 +212,7 @@ def send_email_if_needed(statuses):
     if problem_sites:
         full_message = "⚠️ Обнаружены проблемы с сайтами\n\n" + "\n".join(problem_sites)
         send_email("Проблемы с сайтами", full_message)
-        # send_short_email_to_timeweb(problem_sites)
+        send_short_email_to_timeweb(problem_sites)
 
 # --- Обработка кнопки ---
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -284,7 +284,7 @@ async def background_check(app):
                 await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000])
 
                 send_email("Проблемы с сайтами", msg)
-                # success = send_short_email_to_timeweb(problem_sites)
+                success = send_short_email_to_timeweb(problem_sites)
 
                 # Telegram-уведомление об отправке email
                 if success:
