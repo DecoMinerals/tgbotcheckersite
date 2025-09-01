@@ -37,7 +37,7 @@ PASSWORD = os.getenv('PASSBOT')
 
 # --- Список сайтов ---
 SITES = [
-    "http://sdasdads.ru".
+    "http://sdasdads.ru",
     "https://silmer.org",
     "https://decomachinery.ru",
     "https://decominerals.ru",
