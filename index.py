@@ -266,34 +266,35 @@ async def background_check(app):
             current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             problem_sites = [s for s in result if "❌" in s or "⚠️" in s]
 
-if problem_sites:
-    msg = (
-        f"⚠️ Обнаружены проблемы с сайтами\n\n"
-        f"Время проверки: {current_time}\n\n" +
-        "\n".join(problem_sites)
-    )
+            if problem_sites:
+                msg = (
+                    f"⚠️ Обнаружены проблемы с сайтами\n\n"
+                    f"Время проверки: {current_time}\n\n" +
+                    "\n".join(problem_sites)
+                )
 
-    # Формируем клавиатуру перед отправкой
-    keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+                # Формируем клавиатуру
+                keyboard = [[InlineKeyboardButton("🔍 Проверить сайты", callback_data="check")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Отправка Telegram-уведомления
-    await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000], reply_markup=reply_markup)
+                # Отправка уведомления в Telegram
+                await app.bot.send_message(chat_id=CHAT_ID, text=msg[:4000], reply_markup=reply_markup)
 
-    # Отправка email
-    send_email("Проблемы с сайтами", msg)
-    success = send_short_email_to_timeweb(problem_sites)
+                # Отправка email
+                send_email("Проблемы с сайтами", msg)
+                success = send_short_email_to_timeweb(problem_sites)
 
-    if success:
-        await app.bot.send_message(chat_id=CHAT_ID, text="✅ Email отправлен в Timeweb.")
-    else:
-        await app.bot.send_message(chat_id=CHAT_ID, text="❌ Не удалось отправить email в Timeweb!")
-
+                # Отправка уведомления о статусе email
+                if success:
+                    await app.bot.send_message(chat_id=CHAT_ID, text="✅ Email отправлен в Timeweb.")
+                else:
+                    await app.bot.send_message(chat_id=CHAT_ID, text="❌ Не удалось отправить email в Timeweb!")
 
         except Exception as e:
             logging.error(f"Ошибка в фоновом процессе: {e}")
 
         await asyncio.sleep(60 * 5)  # Пауза 5 минут
+
 
 
 
