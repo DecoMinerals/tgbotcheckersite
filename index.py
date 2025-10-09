@@ -39,9 +39,7 @@ PASSWORD = os.getenv('PASSBOT')
 SITES = [
     "https://silmer.org",
     "https://decomachinery.ru",
-    "https://decominerals.ru",
     "https://stevent.ru",
-    "https://hockey.decominerals.ru",
     "https://decofiltr.ru",
     "https://decomol.ru",
     "https://decoseeds.ru",
