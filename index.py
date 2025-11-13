@@ -50,8 +50,6 @@ SITES = [
     "https://decoorb.ru",
     "https://decoclear.ru",
     "https://decoarmor.ru",
-    "https://decopool.pro",
-    "https://decobase.pro",
     "https://decoessence.ru",
     "https://decobrew.ru",
     "https://decogrape.ru",
