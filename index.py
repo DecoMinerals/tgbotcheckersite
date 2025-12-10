@@ -58,7 +58,6 @@ SITES = [
     "https://decobrights.ru",
     "https://stilldry.pro",
     "https://roaddry.ru",
-    "https://decocopper.ru",
     "https://decotech.pro",
     "https://decofry.ru",
 ]
