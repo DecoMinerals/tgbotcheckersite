@@ -45,7 +45,6 @@ SITES = [
     "https://decoseeds.ru",
     "https://benteco.ru",
     "https://amitox.ru",
-    "https://decoguard.ru",
     "https://decofield.pro",
     "https://decoorb.ru",
     "https://decoclear.ru",
