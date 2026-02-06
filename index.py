@@ -59,7 +59,8 @@ SITES = [
     "https://roaddry.ru",
     "https://decotech.pro",
     "https://decofry.ru",
-    "https://decobase.net"
+    "https://decobase.net",
+    "https://decoguard.ru"
 ]
 
 # --- Логирование ---
