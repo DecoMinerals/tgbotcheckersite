@@ -60,7 +60,8 @@ SITES = [
     "https://decotech.pro",
     "https://decofry.ru",
     "https://decobase.net",
-    "https://decoguard.ru"
+    "https://decoguard.ru",
+    "https://decohockey.ru"
 ]
 
 # --- Логирование ---
