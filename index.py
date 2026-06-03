@@ -298,7 +298,7 @@ async def background_check(app):
 if __name__ == "__main__":
     from telegram.request import HTTPXRequest
     request = HTTPXRequest(
-        proxy="socks5://174.138.161.186:52046",
+        proxy="socks5://192.111.135.18:18301",
         connect_timeout=30,
         read_timeout=30
     )
