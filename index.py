@@ -293,7 +293,6 @@ async def background_check(app):
 
 
 
-
 # --- Запуск бота ---
 if __name__ == "__main__":
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
