@@ -1,3 +1,12 @@
+import socket
+import requests.packages.urllib3.util.connection as urllib3_cn
+
+# Принудительно используем только IPv4
+def allowed_gateways():
+    return [socket.AF_INET]
+
+urllib3_cn.allowed_gateways = allowed_gateways
+
 import nest_asyncio
 nest_asyncio.apply()
 
