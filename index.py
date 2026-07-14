@@ -257,7 +257,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def background_check(app):
     logging.info("🔄 Фоновая проверка сайтов запущена")
     while True:
+        logging.info("while True")
         try:
+            logging.info("try")
             result = check_sites()
             current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             problem_sites = [s for s in result if "❌" in s or "⚠️" in s]
