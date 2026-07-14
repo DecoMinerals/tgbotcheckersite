@@ -311,8 +311,12 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT, password_check))
     application.add_handler(CallbackQueryHandler(button_handler))
-
-    loop = asyncio.get_event_loop()
-    loop.create_task(background_check(application))
-
+    
+    # Запускаем бота и передаем фоновую задачу через startup
+    async def post_init(app):
+        # Фоновая задача запускается после инициализации бота
+        asyncio.create_task(background_check(app))
+    
+    application.post_init = post_init
+    
     application.run_polling()
