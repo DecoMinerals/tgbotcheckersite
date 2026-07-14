@@ -296,19 +296,7 @@ async def background_check(app):
 
 # --- Запуск бота ---
 if __name__ == "__main__":
-    from telegram.request import HTTPXRequest
-    request = HTTPXRequest(
-        proxy="socks5://192.111.135.18:18301",
-        connect_timeout=30,
-        read_timeout=30
-    )
-
-    application = ApplicationBuilder() \
-        .token(TELEGRAM_TOKEN) \
-        .request(request) \
-        .get_updates_request(request) \
-        .build()
-
+    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT, password_check))
     application.add_handler(CallbackQueryHandler(button_handler))
