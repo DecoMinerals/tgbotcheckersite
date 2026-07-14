@@ -1,3 +1,18 @@
-# Игнорировать .env файл
-.env
+# Логи
+*.log
 bot.log
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Скомпилированные файлы
+a.out
+*.out
+
+# Pip
+get-pip.py
+
+.env
