@@ -164,6 +164,7 @@ def check_dns(url):
 # --- Проверка сайтов ---
 def check_sites():
     result = []
+    logging.info("check_sites()")
     for site in SITES:
         try:
             if not check_dns(site):
@@ -197,8 +198,8 @@ def check_sites():
             result.append(f"⚠️ {site} ошибка SSL: {str(e)}")
         except requests.exceptions.ConnectionError:
             result.append(f"❌ {site} ошибка подключения")
-        # except Exception as e:
-        #     result.append(f"❌ {site} непредвиденная ошибка: {str(e)}")
+        except Exception as e:
+            result.append(f"❌ {site} непредвиденная ошибка: {str(e)}")
 
     return result
 
